@@ -9,7 +9,32 @@
 #include "sr_arpcache.h"
 #include "sr_router.h"
 #include "sr_if.h"
-#include "sr_protocol.h"
+
+int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
+  cout << "*** Processing New ARP Request ***" << endl;
+  
+  time_t cur_time = time(NULL);
+  if (difftime(cur_time, req->sent) >= SR_ARPCACHE_SEND_INTERVAL) {
+    if (req->times_sent >= SR_ARPCACHE_MAX_SENDS) {
+      cout << "*** Exceeded ARP Send Limit - Host Unreachable ***" << endl;
+      
+      // send ICMP host unreachable for all packets waiting on this request   
+      struct sr_packet* packet;
+      for (packet = req->packets; packet != NULL; packet = packet->next) {
+        // send icmp packet
+      }
+      
+      // free request and remove from queue
+      sr_arpreq_destroy(&(sr->cache), req);
+    }
+    else {
+      cout << "*** Sending ARP Request - Attempt " << req->times_sent + 1 << " ***" << endl;
+      
+      // resend arp request
+    }
+  }
+  return 0;
+}
 
 /* 
   This function gets called every second. For each request sent out, we keep
@@ -17,7 +42,11 @@
   See the comments in the header file for an idea of what it should look like.
 */
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
-    /* Fill this in */
+  assert(sr);
+  struct sr_arpreq* req = sr->cache.requests;
+  for (; req != NULL; req = req->next){
+    // handle arp request
+  }  
 }
 
 /* You should not need to touch the rest of this code. */
