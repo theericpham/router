@@ -10,8 +10,29 @@
 #include "sr_router.h"
 #include "sr_if.h"
 
-#define ARP_REQ_SEND_INTERVAL 1.0
-#define ARP_REQ_SEND_LIMIT    5
+#define ARP_REQ_SEND_INTERVAL      1.0
+#define ARP_REQ_SEND_LIMIT         5
+#define ICMP_TYPE_ECHO_REPLY       0
+#define ICMP_CODE_ECHO_REPLY       0
+#define ICMP_TYPE_HOST_UNREACHABLE 3
+#define ICMP_CODE_HOST_UNREACHABLE 1
+
+int sr_send_icmp(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip, uint8_t* payload, char* interface) {
+  // int start = sizeof(sr_ethernet_hdr_t) + sizeof(sr_ip_hdr_t); 
+  // uint8_t* packet = (uint8_t*) malloc(sizeof(sr_icmp_hdr_t));
+  // 
+  // sr_icmp_hdr_t icmp_response = (sr_icmp_hdr_t*) (start + packet);
+  // icmp_response->icmp_type = type;
+  // icmp_response->icmp_code = code;
+  // 
+  // memcpy(icmp_response->data, payload, ICMP_DATA_SIZE);
+  // 
+  // icmp_response->icmp_sum = 0;
+  // icmp_response->cksum(start + packet, sizeof(sr_icmp_hdr_t));
+  
+  return 0;
+}
+
 
 int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
   printf("*** Processing ARP Request ***\n");
