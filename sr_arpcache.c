@@ -10,29 +10,35 @@
 #include "sr_router.h"
 #include "sr_if.h"
 
+#define ARP_REQ_SEND_INTERVAL 1.0
+#define ARP_REQ_SEND_LIMIT    5
+
 int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
-  cout << "*** Processing New ARP Request ***" << endl;
+  printf("*** Processing ARP Request ***\n");
   
-  time_t cur_time = time(NULL);
-  if (difftime(cur_time, req->sent) >= SR_ARPCACHE_SEND_INTERVAL) {
-    if (req->times_sent >= SR_ARPCACHE_MAX_SENDS) {
-      cout << "*** Exceeded ARP Send Limit - Host Unreachable ***" << endl;
+  time_t now = time(NULL);
+  if (difftime(now, req->sent) > ARP_REQ_SEND_INTERVAL) {
+    printf("*** ARP Request has been sent %i times ***\n", req->times_sent)
+    if (req->times_sent >= ARP_REQ_SEND_LIMIT) {
+      printf("*** ARP Request has reached send limit ***\n")
       
-      // send ICMP host unreachable for all packets waiting on this request   
+      // send ICMP host unreachable to source of
+      // each packet pending on ARP request
       struct sr_packet* packet;
       for (packet = req->packets; packet != NULL; packet = packet->next) {
-        // send icmp packet
+        // send ICMP packet
       }
-      
-      // free request and remove from queue
-      sr_arpreq_destroy(&(sr->cache), req);
     }
     else {
-      cout << "*** Sending ARP Request - Attempt " << req->times_sent + 1 << " ***" << endl;
+      // send ARP request
       
-      // resend arp request
+      
+      // update ARP request info
+      req->sent = now;
+      req->times_sent = req->times_sent + 1;
     }
   }
+  
   return 0;
 }
 
@@ -45,8 +51,9 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
   assert(sr);
   struct sr_arpreq* req = sr->cache.requests;
   for (; req != NULL; req = req->next){
-    // handle arp request
-  }  
+    if (int err = sr_handle_arp_request(sr, req) < 0)
+      printf("*** Error %i Handling ARP Request\n", err);
+  } 
 }
 
 /* You should not need to touch the rest of this code. */
