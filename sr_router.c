@@ -79,6 +79,12 @@ void sr_handlepacket(struct sr_instance* sr,
   printf("*** -> Received packet of length %d \n",len);
 
   /* fill in code here */
+<<<<<<< HEAD
+=======
+  //First need to figure out what protocol is running above Ethernet here.
+  short ether_type = packet[12] * 64 + packet[13];
+  printf("*** Protocol is %d \n", ether_type);
+>>>>>>> 328e798da030076914aa1df1eca8daeacd7e9fe8
 
 }/* end sr_ForwardPacket */
 

@@ -11,13 +11,133 @@
 #include "sr_if.h"
 #include "sr_protocol.h"
 
+#define ARP_REQ_SEND_INTERVAL       1.0
+#define ARP_REQ_SEND_LIMIT          5
+#define ICMP_TYPE_ECHO_REPLY        0
+#define ICMP_CODE_ECHO_REPLY        0
+#define ICMP_TYPE_DEST_UNREACHABLE  3
+#define ICMP_CODE_NET_UNREACHABLE   0
+#define ICMP_CODE_PORT_UNREACHABLE  3
+#define ICMP_CODE_HOST_UNREACHABLE  1
+#define ICMP_TYPE_TIME_EXCEEDED     11
+#define ICMP_CODE_TTL_EXPIRED       0
+#define IP_V4                       4
+#define IP_HEADER_LEN               5
+#define IP_HEADER_TTL               16
+
+
+/*
+  Format the headers to send an ICMP message
+*/
+int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip, uint8_t* payload, char* interface) {
+  printf("*** Initializing ICMP Packet with Type %i: Code %i\n", type, code);
+  
+  // mark the start offset of the icmp message
+  // set the full length of the ethernet frame
+  int eth_hdr_size  = sizeof(sr_ethernet_hdr_t);
+  int ip_hdr_size   = sizeof(sr_ip_hdr_t);
+  int icmp_hdr_size = sizeof(sr_icmp_t3_hdr_t);
+  int ip_offset     = eth_hdr_size;
+  int icmp_offset   = eth_hdr_size + ip_hdr_size;
+  int len           = eth_hdr_size + ip_hdr_size + icmp_hdr_size;
+  
+  // allocate mem for ethernet frame
+  uint8_t* eth_frame = (uint8_t*) malloc(len);
+  
+  // fill in icmp header
+  sr_icmp_t3_hdr_t* msg = (sr_icmp_t3_hdr_t*) (eth_frame + icmp_offset);
+  memcpy(msg->data, payload, ICMP_DATA_SIZE);
+  msg->icmp_type = type;
+  msg->icmp_code = code;
+  msg->unused    = 0;
+  msg->next_mtu  = 0;
+  msg->sum       = 0;
+  msg->sum       = cksum(ether_frame + icmp_offset, icmp_hdr_size));
+  
+  printf("*** Created ICMP Header with Message ***\n");
+  
+  // fill in ip header
+  sr_ip_hdr_t* packet  = (sr_ip_hdr_t*) (eth_frame + ip_offset);
+  packet->ip_v   = IP_V4;
+  packet->ip_hl  = IP_HEADER_LEN;
+  packet->ip_tos = 0;
+  packet->ip_len = htons(len - ip_offset);
+  packet->ip_id  = htons(0);
+  packet->ip_off = htons(IP_DF);
+  packet->ip_dst = dip;
+  packet->ip_src = source->ip;  
+  packet->ip_ttl = IP_HEADER_TTL;
+  packet->ip_p   = ip_protocol_icmp;
+  
+  // set source and destination ip
+  struct sr_if* source = sr_get_interface(sr, interface);
+  packet->ip_dst = dip;
+  packet->ip_src = source->ip;
+  
+  // compute ip checksum
+  packet->ip_sum = 0;
+  packet->ip+sum = cksum(eth_frame + ip_offset, ip_hdr_size);
+  
+  printf("*** Created IP Packet ***\n");
+  
+  // create ethernet frame
+  sr_ethernet_hdr_t* frame = (sr_ethernet_hdr_t*) (eth_frame);
+  frame->ether_type = htons(ethertype_ip);
+  
+  printf("*** Created Ethernet Frame ***\n");
+  
+  // send packet
+  // need to get MAC address from arpcache
+  
+  printf("*** Sent ICMP Packet ***\n");
+  
+  free(eth_frame);
+  
+  return 0;
+}
+
+
+int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
+  printf("*** Processing ARP Request ***\n");
+  
+  time_t now = time(NULL);
+  if (difftime(now, req->sent) > ARP_REQ_SEND_INTERVAL) {
+    printf("*** ARP Request has been sent %i times ***\n", req->times_sent)
+    if (req->times_sent >= ARP_REQ_SEND_LIMIT) {
+      printf("*** ARP Request has reached send limit ***\n")
+      
+      // send ICMP host unreachable to source of
+      // each packet pending on ARP request
+      struct sr_packet* packet;
+      for (packet = req->packets; packet != NULL; packet = packet->next) {
+        // send ICMP packet
+      }
+    }
+    else {
+      // send ARP request
+      
+      
+      // update ARP request info
+      req->sent = now;
+      req->times_sent = req->times_sent + 1;
+    }
+  }
+  
+  return 0;
+}
+
 /* 
   This function gets called every second. For each request sent out, we keep
   checking whether we should resend an request or destroy the arp request.
   See the comments in the header file for an idea of what it should look like.
 */
 void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
-    /* Fill this in */
+  assert(sr);
+  struct sr_arpreq* req = sr->cache.requests;
+  for (; req != NULL; req = req->next){
+    if (int err = sr_handle_arp_request(sr, req) < 0)
+      printf("*** Error %i Handling ARP Request\n", err);
+  } 
 }
 
 /* You should not need to touch the rest of this code. */

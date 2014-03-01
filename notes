@@ -1,0 +1,83 @@
+sr_router.c
+
+  sr_handlepacket(sr_instance* sr, uint8_t* packet, unsigned int len, char* interface)
+    if len < size of ethernet header //I think this check is redundant here -Caleb
+      error
+      
+    if ethernet type is IP
+      process as IP packet
+    else if ethernet type is ARP
+      process as ARP packet
+    else
+      error
+  
+  sr_handle_ip_packet(sr_instance* sr, uint8_t* packet, unsigned int len, char* interface)
+    if len < size of (ethernet header + IP header)
+      error
+      
+    create IP header
+    compute checksum on HIP header
+    get interface for packet
+    
+    if interface belongs to router
+  
+    else
+      get next route
+      if next route is null
+        send ICMP
+        
+      decrement packet ttl
+      if packet ttl becomes 0
+        send ICMP
+      recompute checksum
+      send packet
+      
+  sr_handle_arp_packet(sr_instance* sr, uint8_t* packet, unsigned int len, char* interface)
+    if len < size of (ethernet header + ARP header)
+      error
+      
+    format ARP header and get interface
+    
+    if interface not found
+      error
+      
+    if ARP reply
+      insert IP to MAC address mapping into cache (returns an ARP request if one exists)
+      for all packets waiting on this ARP request
+        update packet fields by casting as ethernet header
+        set ethernet frame
+          destination host address = target MAC
+          source host address = source MAC
+        return packet
+        destroy request
+    
+    if ARP request
+      set ARP header
+        destination = source
+        source = our interface
+        change code from ARP request to ARP reply
+      set ethernet frame
+        destination host address = target MAC
+        source host address = source MAC
+      return packet
+      
+sr_arpcache.c
+  sr_arpcache_sweepreqs(sr_instance* sr)
+    for each request in cache
+      handle ARP request
+
+  sr_handle_arpreq(sr_instace* sr, sr_arpreq*, req)
+    if difftime(now, req->sent) > 1.0
+        if req->times_sent >= 5:
+            send icmp host unreachable to source addr of all pkts waiting on this request
+            destroy request
+        else:
+            send arp request
+            req->sent = now
+            req->times_sent++
+      
+
+sr_icmp.c --> new file
+  sr_send_icmp(sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip, uint8_t* payload, char* interface)
+    NOTE: why are there 2 structs for icmp and which one do we use?
+      
