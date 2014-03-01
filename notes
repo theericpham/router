@@ -1,7 +1,7 @@
 sr_router.c
 
   sr_handlepacket(sr_instance* sr, uint8_t* packet, unsigned int len, char* interface)
-    if len < size of ethernet header
+    if len < size of ethernet header //I think this check is redundant here -Caleb
       error
       
     if ethernet type is IP
