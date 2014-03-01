@@ -71,15 +71,10 @@
 #include <pthread.h>
 #include "sr_if.h"
 
-<<<<<<< HEAD
-#define SR_ARPCACHE_SZ    100  
-#define SR_ARPCACHE_TO    15.0
-=======
 #define SR_ARPCACHE_SZ            100  
 #define SR_ARPCACHE_TO            15.0
 #define SR_ARPCACHE_MAX_SENDS     5
 #define SR_ARPCACHE_SEND_INTERVAL 1.0
->>>>>>> 328e798da030076914aa1df1eca8daeacd7e9fe8
 
 struct sr_packet {
     uint8_t *buf;               /* A raw Ethernet frame, presumably with the dest MAC empty */
@@ -154,10 +149,7 @@ int   sr_arpcache_init(struct sr_arpcache *cache);
 int   sr_arpcache_destroy(struct sr_arpcache *cache);
 void *sr_arpcache_timeout(void *cache_ptr);
 
-<<<<<<< HEAD
-=======
 /* Handles and sends ARP requests waiting in the queue. */
 int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req);
 
->>>>>>> 328e798da030076914aa1df1eca8daeacd7e9fe8
 #endif

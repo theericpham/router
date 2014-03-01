@@ -29,14 +29,10 @@
 
 #define INIT_TTL 255
 #define PACKET_DUMP_SIZE 1024
-<<<<<<< HEAD
-=======
-//Caleb added:
+/*Caleb added:*/
 #define IP_MIN_PACKET_SIZE 20
 #define ETHERNET_MIN_FRAME_SIZE 64 //14 header 46 payload 4 checksum
-//But why ... this seems to be wrong. Cus all the packets incoming say 42 bytes
->>>>>>> 328e798da030076914aa1df1eca8daeacd7e9fe8
-
+/*But why ... this seems to be wrong. Cus all the packets incoming say 42 bytes*/
 /* forward declare */
 struct sr_if;
 struct sr_rt;
@@ -74,12 +70,9 @@ int sr_read_from_server(struct sr_instance* );
 /* -- sr_router.c -- */
 void sr_init(struct sr_instance* );
 void sr_handlepacket(struct sr_instance* , uint8_t * , unsigned int , char* );
-<<<<<<< HEAD
-=======
-//Caleb and Eric's added functions
-void sr_handle_ip_packet(sr_instance* sr, uint8_t* packet, unsigned int len, char* interface);
-void sr_handle_arp_packet(sr_instance* sr, uint8_t* packet, unsigned int len, char* interface);
->>>>>>> 328e798da030076914aa1df1eca8daeacd7e9fe8
+/*Caleb and Eric's added functions */
+void sr_handle_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface);
+void sr_handle_arp_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface);
 
 /* -- sr_if.c -- */
 void sr_add_interface(struct sr_instance* , const char* );
