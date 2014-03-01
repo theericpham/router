@@ -31,7 +31,7 @@
 #define PACKET_DUMP_SIZE 1024
 /*Caleb added:*/
 #define IP_MIN_PACKET_SIZE 20
-#define ETHERNET_MIN_FRAME_SIZE 64 //14 header 46 payload 4 checksum
+#define ETHERNET_MIN_FRAME_SIZE 64 /*14 header 46 payload 4 checksum*/
 /*But why ... this seems to be wrong. Cus all the packets incoming say 42 bytes*/
 /* forward declare */
 struct sr_if;

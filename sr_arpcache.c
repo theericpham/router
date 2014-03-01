@@ -11,6 +11,7 @@
 #include "sr_router.h"
 #include "sr_if.h"
 #include "sr_protocol.h"
+#include "sr_utils.h"
 
 #define ARP_REQ_SEND_INTERVAL       1.0
 #define ARP_REQ_SEND_LIMIT          5
@@ -52,8 +53,8 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip
   msg->icmp_code = code;
   msg->unused    = 0;
   msg->next_mtu  = 0;
-  msg->sum       = 0;
-  msg->sum       = cksum(ether_frame + icmp_offset, icmp_hdr_size));
+  msg->icmp_sum       = 0; /* TODO: isn't this redundant? */
+  msg->icmp_sum       = cksum(eth_frame + icmp_offset, icmp_hdr_size);
   
   printf("*** Created ICMP Header with Message ***\n");
   
@@ -66,18 +67,15 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip
   packet->ip_id  = htons(0);
   packet->ip_off = htons(IP_DF);
   packet->ip_dst = dip;
-  packet->ip_src = source->ip;  
   packet->ip_ttl = IP_HEADER_TTL;
   packet->ip_p   = ip_protocol_icmp;
-  
-  /* set source and destination ip */
+  /* set source ip */
   struct sr_if* source = sr_get_interface(sr, interface);
-  packet->ip_dst = dip;
   packet->ip_src = source->ip;
   
   /* compute ip checksum */
   packet->ip_sum = 0;
-  packet->ip+sum = cksum(eth_frame + ip_offset, ip_hdr_size);
+  packet->ip_sum = cksum(eth_frame + ip_offset, ip_hdr_size);
   
   printf("*** Created IP Packet ***\n");
   
@@ -103,15 +101,15 @@ int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
   
   time_t now = time(NULL);
   if (difftime(now, req->sent) > ARP_REQ_SEND_INTERVAL) {
-    printf("*** ARP Request has been sent %i times ***\n", req->times_sent)
+    printf("*** ARP Request has been sent %i times ***\n", req->times_sent);
     if (req->times_sent >= ARP_REQ_SEND_LIMIT) {
-      printf("*** ARP Request has reached send limit ***\n")
+      printf("*** ARP Request has reached send limit ***\n");
       
       /* send ICMP host unreachable to source of
           each packet pending on ARP request */
       struct sr_packet* packet;
       for (packet = req->packets; packet != NULL; packet = packet->next) {
-        ;// send ICMP packet
+        ;/* send ICMP packet */
       }
     }
     else {
@@ -137,7 +135,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
   struct sr_arpreq* req = sr->cache.requests;
   int err;
   for (; req != NULL; req = req->next){
-    if (err = sr_handle_arp_request(sr, req) < 0)
+    if ((err = sr_handle_arp_req(sr, req)) < 0)
       printf("*** Error %i Handling ARP Request\n", err);
   } 
 }
