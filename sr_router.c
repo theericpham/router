@@ -80,7 +80,7 @@ void sr_handlepacket(struct sr_instance* sr,
 
   /*First need to figure out what protocol is running above Ethernet here.*/
   sr_ethernet_hdr_t* eth_frame = (sr_ethernet_hdr_t*)packet;
-  short ether_type = packet->ether_type;
+  short ether_type = eth_frame->ether_type;
   printf("*** Protocol is %d \n", ether_type);
 
 }/* end sr_ForwardPacket */
