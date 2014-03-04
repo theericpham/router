@@ -60,8 +60,6 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t des
   packet->ip_len = htons(len - ip_offset);
   packet->ip_id  = htons(0);
   packet->ip_off = htons(IP_DF);
-  packet->ip_dst = dip;
-  packet->ip_src = source->ip;  
   packet->ip_ttl = IP_HEADER_TTL;
   packet->ip_p   = ip_protocol_icmp;
   
@@ -82,6 +80,40 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t des
   
   printf("*** Created Ethernet Frame ***\n");
   
+  // search routing table for route to dest IP
+  struct sr_rt* route = sr_find_route(sr, dest);
+  if (route == NULL) {
+    printf("*** No Route Found to Destiation IP Address: %i ***\n", dest);
+    return -1;
+  }
+  
+  printf("*** Route to Destination IP Address %i Uses Interface: %s ***\n", dest, route->interface);
+  
+  // find ARP entry for dest IP
+  struct sr_arpentry* arp_entry = sr_arpcache_lookup(&(sr->cache), dest);
+  if (arp_entry) {
+    printf("*** Found ARP Entry for Destination IP Address: %i ***\n", dest);
+    
+    // get source mac address
+    struct sr_if* rt_if = sr_get_interface(sr, route->interace);
+    
+    // set mac addresses
+    memcpy(eth_frame->ether_dhost, arp_entry->mac, ETHER_ADDR_LEN);
+    memcpy(eth_frame->ether_shost, rt_if->addr, ETHER_ADDR_LEN);
+    
+    // send packet
+    print_hdrs(eth_frame, len);
+    sr_send_packet(sr, eth_frame, len, route->interface);
+    printf("*** Sent ICMP Packet ***\n");
+    free(arp_entry);
+  }
+  else {
+    printf("*** No ARP Entry Found for Destination IP Address: %i ***\n", dest);
+    struct sr_arpreq* arp_req = sr_arpcache_queuereq(&(sr->cache), dest, eth_frame, len, route->interface);
+    arp_req->interface = route->interface;
+    sr_handle_arpreq(sr, arp_req);
+    printf("*** Queued new ARP request ***\n");
+  }
   
   free(eth_frame);
   
