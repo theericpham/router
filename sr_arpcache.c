@@ -26,7 +26,7 @@
 
 
 /*
-  Format the headers to send an ICMP message
+  Send an ICMP message with the type, code, and payload specified by function arguments
 */
 int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip, uint8_t* payload, char* interface) {
   printf("*** Initializing ICMP Packet with Type %i: Code %i\n", type, code);
@@ -35,7 +35,7 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip
   // set the full length of the ethernet frame
   int eth_hdr_size  = sizeof(sr_ethernet_hdr_t);
   int ip_hdr_size   = sizeof(sr_ip_hdr_t);
-  int icmp_hdr_size = sizeof(sr_icmp_t3_hdr_t);
+  int icmp_hdr_size = sizeof(sr_icmp_hdr_t);
   int ip_offset     = eth_hdr_size;
   int icmp_offset   = eth_hdr_size + ip_hdr_size;
   int len           = eth_hdr_size + ip_hdr_size + icmp_hdr_size;
@@ -44,7 +44,7 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip
   uint8_t* eth_frame = (uint8_t*) malloc(len);
   
   // fill in icmp header
-  sr_icmp_t3_hdr_t* msg = (sr_icmp_t3_hdr_t*) (eth_frame + icmp_offset);
+  sr_icmp_hdr_t* msg = (sr_icmp_hdr_t*) (eth_frame + icmp_offset);
   memcpy(msg->data, payload, ICMP_DATA_SIZE);
   msg->icmp_type = type;
   msg->icmp_code = code;
@@ -85,10 +85,6 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip
   
   printf("*** Created Ethernet Frame ***\n");
   
-  // send packet
-  // need to get MAC address from arpcache
-  
-  printf("*** Sent ICMP Packet ***\n");
   
   free(eth_frame);
   

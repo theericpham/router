@@ -22,6 +22,8 @@
 #include "sr_rt.h"
 #include "sr_router.h"
 
+#define ERR_NULL_RT -1
+
 /*---------------------------------------------------------------------
  * Method:
  *
@@ -176,3 +178,28 @@ void sr_print_routing_entry(struct sr_rt* entry)
     printf("%s\n",entry->interface);
 
 } /* -- sr_print_routing_entry -- */
+
+struct sr_rt* sr_find_route(struct sr_instance* sr, uint32_t dest) {
+  if (sr->routing_table == NULL) {
+    printf("*** Routing Table is Null ***\n");
+    return ERR_NULL_RT;
+  }
+  
+  struct sr_rt* route;
+  struct sr_rt* iter = sr->routing_table;
+  uint16_t prefix;
+  uint16_t mask = 0;
+  
+  while (iter) {
+    if ((dest & (iter->mask).s_addr) == ((iter->mask).s_addr & (iter->mask).s_addr)) {
+      mask = ntohl((iter->mask).s_addr);
+      
+      if (mask > prefix) {
+        route  = iter;
+        prefix = mask;
+      }
+      iter = iter->next;
+    }
+  }
+  return route;
+}
