@@ -31,7 +31,7 @@
 /*
   Send an ICMP message with the type, code, and payload specified by function arguments
 */
-int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dest, char* interface) {
+int sr_send_icmp(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dest, char* interface) {
   printf("*** Initializing ICMP Packet with Type %i: Code %i\n", type, code);
   
   /* mark the start offset of the icmp message
