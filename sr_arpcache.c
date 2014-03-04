@@ -46,24 +46,19 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t des
   /* allocate mem for ethernet frame */
   uint8_t* eth_frame = (uint8_t*) malloc(len);
   
-<<<<<<< HEAD
   // fill in icmp header
   sr_icmp_hdr_t* msg = (sr_icmp_hdr_t*) (eth_frame + icmp_offset);
   msg->icmp_type = type;
   msg->icmp_code = code;
   msg->sum       = 0;
   msg->sum       = cksum(ether_frame + icmp_offset, icmp_hdr_size));
-=======
+  
   /* fill in icmp header */
-  sr_icmp_t3_hdr_t* msg = (sr_icmp_t3_hdr_t*) (eth_frame + icmp_offset);
-  memcpy(msg->data, payload, ICMP_DATA_SIZE);
+  sr_icmp_hdr_t* msg = (sr_icmp_hdr_t*) (eth_frame + icmp_offset);
   msg->icmp_type = type;
   msg->icmp_code = code;
-  msg->unused    = 0;
-  msg->next_mtu  = 0;
-  msg->icmp_sum       = 0; /* TODO: isn't this redundant? */
-  msg->icmp_sum       = cksum(eth_frame + icmp_offset, icmp_hdr_size);
->>>>>>> fe243fde38c4bc687c3d955efdd89423ce668e55
+  msg->icmp_sum  = 0; /* TODO: isn't this redundant? */
+  msg->icmp_sum  = cksum(eth_frame + icmp_offset, icmp_hdr_size);
   
   printf("*** Created ICMP Header with Message ***\n");
   
@@ -75,18 +70,12 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t des
   packet->ip_len = htons(len - ip_offset);
   packet->ip_id  = htons(0);
   packet->ip_off = htons(IP_DF);
-<<<<<<< HEAD
-=======
-  packet->ip_dst = dip;
->>>>>>> fe243fde38c4bc687c3d955efdd89423ce668e55
   packet->ip_ttl = IP_HEADER_TTL;
   packet->ip_p   = ip_protocol_icmp;
+  
   /* set source ip */
   struct sr_if* source = sr_get_interface(sr, interface);
-<<<<<<< HEAD
   packet->ip_dst = dest;
-=======
->>>>>>> fe243fde38c4bc687c3d955efdd89423ce668e55
   packet->ip_src = source->ip;
   
   /* compute ip checksum */
@@ -101,7 +90,6 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t des
   
   printf("*** Created Ethernet Frame ***\n");
   
-<<<<<<< HEAD
   // search routing table for route to dest IP
   struct sr_rt* route = sr_find_route(sr, dest);
   if (route == NULL) {
@@ -110,10 +98,6 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t des
   }
   
   printf("*** Route to Destination IP Address %i Uses Interface: %s ***\n", dest, route->interface);
-=======
-  /* send packet
-     need to get MAC address from arpcache */
->>>>>>> fe243fde38c4bc687c3d955efdd89423ce668e55
   
   // find ARP entry for dest IP
   struct sr_arpentry* arp_entry = sr_arpcache_lookup(&(sr->cache), dest);
