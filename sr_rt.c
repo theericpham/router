@@ -180,23 +180,23 @@ void sr_print_routing_entry(struct sr_rt* entry)
 } /* -- sr_print_routing_entry -- */
 
 struct sr_rt* sr_find_route(struct sr_instance* sr, uint32_t dest) {
-  if (sr->routing_table == NULL) {
+  if (sr->routing_table == 0) {
     printf("*** Routing Table is Null ***\n");
     return ERR_NULL_RT;
   }
   
-  struct sr_rt* route;
-  struct sr_rt* iter = sr->routing_table;
-  uint16_t prefix;
-  uint16_t mask = 0;
+  struct sr_rt* route = 0;
+  struct sr_rt* iter  = sr->routing_table;
+  uint16_t longest_prefix = 0;
+  uint16_t prefix         = 0;
   
   while (iter) {
-    if ((dest & (iter->mask).s_addr) == ((iter->mask).s_addr & (iter->mask).s_addr)) {
-      mask = ntohl((iter->mask).s_addr);
+    if ((dest & (iter->mask).s_addr) == ((iter->dest).s_addr & (iter->mask).s_addr)) {
+      prefix = ntohl((iter->mask).s_addr);
       
-      if (mask > prefix) {
+      if (prefix > longest_prefix) {
         route  = iter;
-        prefix = mask;
+        longest_prefix = prefix;
       }
       iter = iter->next;
     }

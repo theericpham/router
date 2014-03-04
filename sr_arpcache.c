@@ -28,7 +28,7 @@
 /*
   Send an ICMP message with the type, code, and payload specified by function arguments
 */
-int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip, uint8_t* payload, char* interface) {
+int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dest, char* interface) {
   printf("*** Initializing ICMP Packet with Type %i: Code %i\n", type, code);
   
   // mark the start offset of the icmp message
@@ -45,11 +45,8 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip
   
   // fill in icmp header
   sr_icmp_hdr_t* msg = (sr_icmp_hdr_t*) (eth_frame + icmp_offset);
-  memcpy(msg->data, payload, ICMP_DATA_SIZE);
   msg->icmp_type = type;
   msg->icmp_code = code;
-  msg->unused    = 0;
-  msg->next_mtu  = 0;
   msg->sum       = 0;
   msg->sum       = cksum(ether_frame + icmp_offset, icmp_hdr_size));
   
@@ -70,12 +67,12 @@ int sr_send_msg(struct sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip
   
   // set source and destination ip
   struct sr_if* source = sr_get_interface(sr, interface);
-  packet->ip_dst = dip;
+  packet->ip_dst = dest;
   packet->ip_src = source->ip;
   
   // compute ip checksum
   packet->ip_sum = 0;
-  packet->ip+sum = cksum(eth_frame + ip_offset, ip_hdr_size);
+  packet->ip_sum = cksum(eth_frame + ip_offset, ip_hdr_size);
   
   printf("*** Created IP Packet ***\n");
   
