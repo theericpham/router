@@ -1,7 +1,7 @@
 sr_router.c
 
   sr_handlepacket(sr_instance* sr, uint8_t* packet, unsigned int len, char* interface)
-    if len < size of ethernet header
+    if len < size of ethernet header //I think this check is redundant here -Caleb
       error
       
     if ethernet type is IP
@@ -13,22 +13,26 @@ sr_router.c
   
   sr_handle_ip_packet(sr_instance* sr, uint8_t* packet, unsigned int len, char* interface)
     if len < size of (ethernet header + IP header)
-      error
+      ICMP type 12 code 2 bad length
       
     create IP header
-    compute checksum on HIP header
-    get interface for packet
+    compute checksum on IP header
+      if bad, ICMP error?
     
+    get interface for packet
     if interface belongs to router
-  
+      ...
     else
-      get next route
-      if next route is null
-        send ICMP
+      Look up next-hop IP address in routing table using destination IP address
+        if no next-hop IP, send ICMP type 3 code 0, destination network unreachable
+      Look up MAC address for next-hop IP in ARP cache
+      If next-hop MAC isn't cached,
+        send ARP request for it
+        add this packet to queue
         
       decrement packet ttl
       if packet ttl becomes 0
-        send ICMP
+        send ICMP type 11 code 0, time exceeded
       recompute checksum
       send packet
       

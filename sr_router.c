@@ -78,7 +78,32 @@ void sr_handlepacket(struct sr_instance* sr,
 
   printf("*** -> Received packet of length %d \n",len);
 
-  /* fill in code here */
-
+  /*First need to figure out what protocol is running above Ethernet here.*/
+  short ether_type = ethertype(packet);
+  switch ( ether_type ) {
+    case ethertype_ip :
+      printf("*** Handling IP packet\n");
+      sr_handle_ip_packet(sr, packet, len, interface);
+      break;
+    case ethertype_arp :
+      printf("*** Handling ARP packet\n");
+      sr_handle_arp_packet(sr, packet, len, interface);
+      break;
+    default:
+      printf("*** Unrecognized protocol %x \n", ether_type);
+      /* TODO: Error response, maybe ICMP? */
+      break;
+  }
 }/* end sr_ForwardPacket */
 
+void sr_handle_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface) {
+  /* First do the length check. Unfortunately, I don't understand this part so I'm gonna skip it */
+  if ( 0 )
+    printf("*** Error: bad IP header length %d\n", len);
+    /* Should we also send an ICMP type 12 code 2 bad header length? */
+  
+  /*Need to encapsulate the raw frame in packet into an IP header object*/
+  /*sr_ip_hdr_t* ip_header  = (sr_ip_hdr_t*)packet*/
+}
+
+void sr_handle_arp_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface) {}
