@@ -1,3 +1,5 @@
+Eric's VM IP: 192.168.56.12
+
 sr_router.c
 
   sr_handlepacket(sr_instance* sr, uint8_t* packet, unsigned int len, char* interface)

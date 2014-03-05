@@ -43,8 +43,6 @@ void sr_add_rt_entry(struct sr_instance*, struct in_addr,struct in_addr,
 void sr_print_routing_table(struct sr_instance* sr);
 void sr_print_routing_entry(struct sr_rt* entry);
 
-/*
-  Find longest prefix route for given destination IP address
-*/
-struct sr_rt* sr_find_route(struct sr_instance* sr, uint32_t dest);
+// return longest prefix match for dest in routing table if one exists
+struct sr_rt* sr_find_lpm_route(struct sr_instance* sr, uint32_t dest);
 #endif  /* --  sr_RT_H -- */

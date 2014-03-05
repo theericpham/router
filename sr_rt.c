@@ -179,27 +179,19 @@ void sr_print_routing_entry(struct sr_rt* entry)
 
 } /* -- sr_print_routing_entry -- */
 
-struct sr_rt* sr_find_route(struct sr_instance* sr, uint32_t dest) {
-  if (sr->routing_table == 0) {
-    printf("*** Routing Table is Null ***\n");
-    return ERR_NULL_RT;
-  }
+// return longest prefix match route if any
+struct sr_rt* sr_find_lpm_route(struct sr_instance* sr, uint32_t dest) {
+  int len = 0;
+  struct sr_rt* result;
+  struct sr_rt* iter;
+  iter = sr->routing_table;
   
-  struct sr_rt* route = 0;
-  struct sr_rt* iter  = sr->routing_table;
-  uint16_t longest_prefix = 0;
-  uint16_t prefix         = 0;
-  
-  while (iter) {
-    if ((dest & (iter->mask).s_addr) == ((iter->dest).s_addr & (iter->mask).s_addr)) {
-      prefix = ntohl((iter->mask).s_addr);
-      
-      if (prefix > longest_prefix) {
-        route  = iter;
-        longest_prefix = prefix;
-      }
-      iter = iter->next;
+  for(; cur != 0; cur = cur->next) {
+    if (((dest & (iter->mask).s_addr) == ((iter->dest).s_addr & (iter->mask).s_addr)) &&
+      (len <= ntohl(iter->mask).s_addr)) {
+        result = iter;
+        len = ntohl(iter->mask).s_addr);
     }
   }
-  return route;
+  return result;
 }
