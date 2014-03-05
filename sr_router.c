@@ -23,6 +23,110 @@
 #include "sr_utils.h"
 
 /*---------------------------------------------------------------------
+ * Declaration of Constants
+ *
+ *---------------------------------------------------------------------*/
+
+#define IP_VERSION_4   4
+#define IP_HEADER_LEN  5
+#define IP_DEFAULT_TTL 64
+
+/*---------------------------------------------------------------------
+ * Declaration of Helper Functions
+ *
+ *---------------------------------------------------------------------*/
+
+void sr_send_icmp(struct sr_instance* sr, uint8_t* packet, unsigned int len, uint8_t type, uint8_t code);
+int sr_frame_and_send_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface);
+
+/* 
+ *  Set ethernet frame for a packet by filling in MAC addresses and send the packet 
+ */
+int sr_frame_and_send_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name) {
+  // get the interface to forward from
+  sr_ethernet_hdr_t* frame = (sr_ethernet_hdr_t*) packet;
+  struct sr_if* interface  = sr_get_interface(sr, name);
+  
+  // set MAC addresses
+  memcpy(frame->ether_dhost, mac, ETHER_ADDR_LEN);              // dest specified by args
+  memcpy(frame->ether_shost, interface->addr, ETHER_ADDR_LEN);  // src is interface MAC address
+    
+  sr_send_packet(sr, packet, len, name);
+  
+  return 0;
+}
+
+/* 
+ *  Send an ICMP message with type and code fields to dest from router interface 
+ */
+int sr_send_icmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface) {
+  int ether_hdr_len = sizeof(sr_ethernet_hdr_t);
+  int ip_hdr_len    = sizeof(sr_ip_hdr_t);
+  int icmp_hdr_len  = sizeof(sr_icmp_hdr_t);
+  int len           = ether_hdr_len + ip_hdr_len + icmp_hdr_len;
+  
+  int ip_hdr_offset   = ether_hdr_len;
+  int icmp_hdr_offset = ip_hdr_offset + ip_hdr_len;
+  
+  // construct headers
+  uint8_t* response_packet = (uint8_t*) malloc(len);
+  sr_icmp_hdr_t* icmp_hdr  = (sr_icmp_hdr_t*) (response_packet + icmp_hdr_offset);
+  sr_ip_hdr_t* ip_hdr      = (sr_ip_hdr_t*) (response_packet + ip_hdr_offset);
+  sr_ethernet_hdr_t* ether_hdr = (sr_ethernet_hdr_t*) (response_packet);
+  
+  // fill in icmp header
+  icmp_hdr->icmp_type = type;
+  icmp_hdr->icmp_code = code;
+  icmp_hdr->sum       = 0;
+  icmp_hdr->sum       = cksum(response_packet + icmp_hdr_offset, icmp_hdr_len);
+  
+  // fill in ip header
+  ip_hdr->ip_v   = IP_VERSION_4;
+  ip_hdr->ip_hl  = IP_HEADER_LEN;
+  ip_hdr->ip_tos = 0;
+  ip_hdr->ip_len = len - ip_hdr_offset;
+  ip_hdr->ip_id  = 0;
+  ip_hdr->ip_off = IP_DF;
+  ip_hdr->ip_ttl = IP_DEFAULT_TTL;
+  ip_hdr->ip_p   = ip_protocol_icmp;
+  
+  // get the outgoing interface and set ip src and dst
+  struct sr_if* src_if = sr_get_interface(sr, interface);
+  ip_hdr->ip_dst = dest;
+  ip_hdr->ip_src = src_if>ip;
+  
+  // compute ip header checksum
+  ip_hdr->sum = 0;
+  ip_hdr->sum = cksum(response_packet + ip_hdr_offset, ip_hdr_len);
+  
+  // set ethernet header ethertype
+  ether_hdr->ethertype = ethertype_ip;
+  
+  // find route to dest
+  struct st_rt* route = sr_find_lpm_route(sr, dest);
+  if (route == NULL) {
+    // print error
+    return -1;
+  }
+  
+  // find ARP entry for MAC
+  struct sr_arpentry* arp_entry = sr_arpcache_lookup(&(sr->cache), dest);
+  if (arp_entry) {
+    // fill in ethernet header and set if entry exists
+    sr_frame_and_send_packet(sr, response_packet, len, arp_entry->mac, route->interface);
+    free(arp_entry);
+  }
+  else {
+    // queue and handle arp request if no entry exists
+    struct sr_arpreq* arp_req = sr_arpcache_queuereq(&(sr->cache), dest, response_packet, len, route->interface);
+    arp_req->iface = router->interface;
+    sr_handle_arp_req(sr, req);
+  }
+  
+  return 0;
+}
+
+/*---------------------------------------------------------------------
  * Method: sr_init(void)
  * Scope:  Global
  *
