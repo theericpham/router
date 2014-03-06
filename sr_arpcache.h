@@ -99,6 +99,7 @@ struct sr_arpreq {
                                    should update this. */
     struct sr_packet *packets;  /* List of pkts waiting on this req to finish */
     struct sr_arpreq *next;
+    char* interface; /* Fixed: added this. let's see if it works */
 };
 
 struct sr_arpcache {

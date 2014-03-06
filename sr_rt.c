@@ -179,18 +179,20 @@ void sr_print_routing_entry(struct sr_rt* entry)
 
 } /* -- sr_print_routing_entry -- */
 
-// return longest prefix match route if any
+/* return longest prefix match route if any */
 struct sr_rt* sr_find_lpm_route(struct sr_instance* sr, uint32_t dest) {
   int len = 0;
   struct sr_rt* result;
   struct sr_rt* iter;
-  iter = sr->routing_table;
   
-  for(; cur != 0; cur = cur->next) {
-    if (((dest & (iter->mask).s_addr) == ((iter->dest).s_addr & (iter->mask).s_addr)) &&
-      (len <= ntohl(iter->mask).s_addr)) {
+  
+  for(iter = sr->routing_table; iter != 0; iter = iter->next) { /*Fixed: replaced cur with iter*/
+  /*Fixed: (iter->mask).s_addr should be iter->mask.s_addr */
+  
+    if (((dest & iter->mask.s_addr) == (iter->dest.s_addr & iter->mask.s_addr)) &&
+      (len <= ntohl(iter->mask.s_addr))) {
         result = iter;
-        len = ntohl(iter->mask).s_addr);
+        len = ntohl(iter->mask.s_addr);
     }
   }
   return result;

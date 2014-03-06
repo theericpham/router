@@ -28,14 +28,16 @@ int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
   printf("*** Processing ARP Request ***\n");
   
   time_t now = time(NULL);
+  struct sr_ip_hdr_t* ip_hdr;
+  int ethernet_hdr_offset = sizeof(sr_ethernet_hdr_t);
   if (difftime(now, req->sent) > ARP_REQ_SEND_INTERVAL) {
     if (req->times_sent >= ARP_REQ_SEND_LIMIT) {
       struct sr_packet* packet;
-      struct ip_hdr_t* ip_hdr;
       for (packet = req->packets; packet != NULL; packet = packet->next) {
-        ip_hdr = (sr_ip_hdr_t*) (packet->buf + sizeof(sr_ethernet_hdr_t));
-        if (sr_send_icmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
-          // print error message
+        /*ip_hdr = (sr_ip_hdr_t*) (packet + ethernet_hdr_offset);
+        if (sr_send_icmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)*/
+        /* TODO: Fix this. What is packet->iface, and why does line 37 say incompat ptr type? */
+          ;/* print error message */
       }
       sr_arpreq_destroy(&(sr->cache), req);
     }
@@ -46,28 +48,28 @@ int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
     int arp_hdr_offset = ether_hdr_len;
     int len            = ether_hdr_len + arp_hdr_len;
     
-    // create headers
+    /* create headers */
     uint8_t* response = (uint8_t*) malloc(len);
-    sr_ethernet_hdr_t* ether_hdr = (sr_ethernet_hdr_t*) response;
-    sr_arp_hdr_t* arp_hdr        = (sr_arp_hdr_t*) (frame + arp_hdr_offset);
+    sr_ethernet_hdr_t* ether_hdr = (sr_ethernet_hdr_t*) req; /*Fixed: was response*/
+    sr_arp_hdr_t* arp_hdr        = (sr_arp_hdr_t*) (ether_hdr + arp_hdr_offset);
     
-    // get interface
-    struct sr_if* interface = sr_get_interface(sr, req->iface);
+    /* get interface */
+    struct sr_if* interface = sr_get_interface(sr, req->interface);
     
-    ether_hdr->ethertype = ethertype_arp;
+    ether_hdr->ether_type = ethertype_arp;
     
-    // fill in arp header
+    /* fill in arp header */
     arp_hdr->ar_hrd = arp_hrd_ethernet;
     arp_hdr->ar_pro = ethertype_ip;
     arp_hdr->ar_hln = ETHER_ADDR_LEN;
     arp_hdr->ar_pln = IP_ADDR_LEN;
     arp_hdr->ar_op  = arp_op_request;
-    arp_hdr->ar_sip = interace->ip;
+    arp_hdr->ar_sip = interface->ip;
     arp_hdr->ar_tip = req->ip;
     
-    // set source and destination info
+    /* set source and destination info */
     memcpy(arp_hdr->ar_sha, interface->addr, ETHER_ADDR_LEN);
-    memcpy(ether_hdr->ether_shot, interface->addr, ETHER_ADDR_LEN);
+    memcpy(ether_hdr->ether_shost, interface->addr, ETHER_ADDR_LEN);
     
     int i;
     for (i = 0; i < ETHER_ADDR_LEN; i++) {
@@ -75,10 +77,10 @@ int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
       ether_hdr->ether_dhost[i] = 0xFF;
     }
     
-    // send packet
+    /* send packet */
     sr_send_packet(sr, response, len, interface->name);
     
-    // update request info
+    /* update request info */
     req->sent = time(NULL);
     req->times_sent = req->times_sent + 1;
   }
