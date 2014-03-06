@@ -38,16 +38,16 @@
  *
  *---------------------------------------------------------------------*/
 
-int sendIcmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface); /*Fixed*/
-int frameAndSendPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface);
+int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface); /*Fixed*/
+int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface);
 
 /* 
  *  Set ethernet frame for a packet by filling in MAC addresses and send the packet 
  */
-int frameAndSendPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name) {
+int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name) {
   /* get the interface to forward from */
-  sr_ethernet_hdr_t* frame = (sr_ethernet_hdr_t*) packet;
-  struct sr_if* interface  = getInterface(sr, name);
+  EthernetHeader_t* frame = (EthernetHeader_t*) packet;
+  struct Interface* interface  = getInterface(sr, name);
   
   /* set MAC addresses */
   memcpy(frame->ether_dhost, mac, ETHER_ADDR_LEN);              /* dest specified by args */
@@ -61,10 +61,10 @@ int frameAndSendPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len
 /* 
  *  Send an ICMP message with type and code fields to dest from router interface 
  */
-int sendIcmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface) {
-  int ether_hdr_len = sizeof(sr_ethernet_hdr_t);
-  int ip_hdr_len    = sizeof(sr_ip_hdr_t);
-  int icmp_hdr_len  = sizeof(sr_icmp_hdr_t);
+int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface) {
+  int ether_hdr_len = sizeof(EthernetHeader_t);
+  int ip_hdr_len    = sizeof(IpHeader_t);
+  int icmp_hdr_len  = sizeof(IcmpHeader_t);
   int len           = ether_hdr_len + ip_hdr_len + icmp_hdr_len;
   
   int ip_hdr_offset   = ether_hdr_len;
@@ -72,15 +72,15 @@ int sendIcmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, 
   
   /* construct headers */
   uint8_t* response_packet = (uint8_t*) malloc(len);
-  sr_icmp_hdr_t* icmp_hdr  = (sr_icmp_hdr_t*) (response_packet + icmp_hdr_offset);
-  sr_ip_hdr_t* ip_hdr      = (sr_ip_hdr_t*) (response_packet + ip_hdr_offset);
-  sr_ethernet_hdr_t* ether_hdr = (sr_ethernet_hdr_t*) (response_packet);
+  IcmpHeader_t* icmp_hdr  = (IcmpHeader_t*) (response_packet + icmp_hdr_offset);
+  IpHeader_t* ip_hdr      = (IpHeader_t*) (response_packet + ip_hdr_offset);
+  EthernetHeader_t* ether_hdr = (EthernetHeader_t*) (response_packet);
   
   /* fill in icmp header */
   icmp_hdr->icmp_type = type;
   icmp_hdr->icmp_code = code;
   icmp_hdr->icmp_sum  = 0;
-  icmp_hdr->icmp_sum  = cksum(response_packet + icmp_hdr_offset, icmp_hdr_len);
+  icmp_hdr->icmp_sum  = checksum(response_packet + icmp_hdr_offset, icmp_hdr_len);
   
   /* fill in ip header */
   ip_hdr->ip_v   = IP_VERSION_4;
@@ -93,26 +93,26 @@ int sendIcmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, 
   ip_hdr->ip_p   = ipProtocol_icmp;
   
   /* get the outgoing interface and set ip src and dst */
-  struct sr_if* src_if = getInterface(sr, interface);
+  struct Interface* src_if = getInterface(sr, interface);
   ip_hdr->ip_dst = dest;
   ip_hdr->ip_src = src_if->ip;
   
   /* compute ip header checksum */
   ip_hdr->ip_sum = 0;
-  ip_hdr->ip_sum = cksum(response_packet + ip_hdr_offset, ip_hdr_len);
+  ip_hdr->ip_sum = checksum(response_packet + ip_hdr_offset, ip_hdr_len);
   
   /* set ethernet header ethertype */
   ether_hdr->ether_type = ethertype_ip;
   
   /* find route to dest */
-  struct sr_rt* route = findLpmRoute(sr, dest);
+  struct RoutingTable* route = findLpmRoute(sr, dest);
   if (route == NULL) {
     /* TODO print error or send ICMP? */
     return -1;
   }
   
   /* find ARP entry for MAC */
-  struct sr_arpentry* arp_entry = arpcacheLookup(&(sr->cache), dest);
+  struct ArpEntry* arp_entry = arpCacheLookup(&(sr->cache), dest);
   if (arp_entry) {
     /* TODO fill in ethernet header and set if entry exists */
     /* FIXED the following function call fills in ethernet header and sends packet 
@@ -123,7 +123,7 @@ int sendIcmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, 
   }
   else {
     /* queue and handle arp request if no entry exists */
-    struct sr_arpreq* arp_req = arpcacheQueueRequest(&(sr->cache), dest, response_packet, len, route->interface);
+    struct ArpRequest* arp_req = arpCacheQueueRequest(&(sr->cache), dest, response_packet, len, route->interface);
     arp_req->interface = route->interface;
     /* TODO  what is router ? */
     /* I think this should be route->interface (not router).  Your thoughts? */
@@ -141,13 +141,13 @@ int sendIcmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, 
  *
  *---------------------------------------------------------------------*/
 
-void sr_init(struct sr_instance* sr)
+void sr_init(struct Instance* sr)
 {
     /* REQUIRES */
     assert(sr);
 
     /* Initialize cache and cache cleanup thread */
-    arpcacheInit(&(sr->cache));
+    arpCacheInit(&(sr->cache));
 
     pthread_attr_init(&(sr->attr));
     pthread_attr_setdetachstate(&(sr->attr), PTHREAD_CREATE_JOINABLE);
@@ -155,7 +155,7 @@ void sr_init(struct sr_instance* sr)
     pthread_attr_setscope(&(sr->attr), PTHREAD_SCOPE_SYSTEM);
     pthread_t thread;
 
-    pthread_create(&thread, &(sr->attr), arpcacheTimeout, sr);
+    pthread_create(&thread, &(sr->attr), arpCacheTimeout, sr);
     
     /* Add initialization code here! */
 
@@ -177,7 +177,7 @@ void sr_init(struct sr_instance* sr)
  *
  *---------------------------------------------------------------------*/
 
-void sr_handlepacket(struct sr_instance* sr,
+void sr_handlepacket(struct Instance* sr,
         uint8_t * packet/* lent */,
         unsigned int len,
         char* interface/* lent */)
@@ -207,19 +207,19 @@ void sr_handlepacket(struct sr_instance* sr,
   }
 }/* end sr_handlepacket */
 
-void sr_handle_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface) {
+void sr_handle_ip_packet(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {
   /* First do the length check. Unfortunately, I don't understand this part so I'm gonna skip it */
   if ( 0 )
     printf("*** Error: bad IP header length %d\n", len);
     /* Should we also send an ICMP type 12 code 2 bad header length? */
   
   /*Need to encapsulate the raw frame in packet into an IP header object*/
-  sr_ip_hdr_t* ip_header  = (sr_ip_hdr_t*)packet;
+  IpHeader_t* ip_header  = (IpHeader_t*)packet;
   /* Make sure the checksum is OK */
   uint16_t checksum_received = ip_header->ip_sum;
-  uint16_t checksum_computed = cksum(ip_header, sizeof(sr_ip_hdr_t));
+  uint16_t checksum_computed = checksum(ip_header, sizeof(IpHeader_t));
   if ( checksum_received != checksum_computed )
   	printf("*** Checksum doesn't match :(");
 }
 
-void sr_handle_arp_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface) {}
+void sr_handle_arp_packet(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {}

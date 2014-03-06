@@ -34,9 +34,9 @@
  *
  *---------------------------------------------------------------------*/
 
-struct sr_if* getInterface(struct sr_instance* sr, const char* name)
+struct Interface* getInterface(struct Instance* sr, const char* name)
 {
-    struct sr_if* if_walker = 0;
+    struct Interface* if_walker = 0;
 
     /* -- REQUIRES -- */
     assert(name);
@@ -62,9 +62,9 @@ struct sr_if* getInterface(struct sr_instance* sr, const char* name)
  *
  *---------------------------------------------------------------------*/
 
-void addInterface(struct sr_instance* sr, const char* name)
+void addInterface(struct Instance* sr, const char* name)
 {
-    struct sr_if* if_walker = 0;
+    struct Interface* if_walker = 0;
 
     /* -- REQUIRES -- */
     assert(name);
@@ -73,7 +73,7 @@ void addInterface(struct sr_instance* sr, const char* name)
     /* -- empty list special case -- */
     if(sr->if_list == 0)
     {
-        sr->if_list = (struct sr_if*)malloc(sizeof(struct sr_if));
+        sr->if_list = (struct Interface*)malloc(sizeof(struct Interface));
         assert(sr->if_list);
         sr->if_list->next = 0;
         strncpy(sr->if_list->name,name,sr_IFACE_NAMELEN);
@@ -85,7 +85,7 @@ void addInterface(struct sr_instance* sr, const char* name)
     while(if_walker->next)
     {if_walker = if_walker->next; }
 
-    if_walker->next = (struct sr_if*)malloc(sizeof(struct sr_if));
+    if_walker->next = (struct Interface*)malloc(sizeof(struct Interface));
     assert(if_walker->next);
     if_walker = if_walker->next;
     strncpy(if_walker->name,name,sr_IFACE_NAMELEN);
@@ -100,9 +100,9 @@ void addInterface(struct sr_instance* sr, const char* name)
  *
  *---------------------------------------------------------------------*/
 
-void setEthernetAddress(struct sr_instance* sr, const unsigned char* addr)
+void setEthernetAddress(struct Instance* sr, const unsigned char* addr)
 {
-    struct sr_if* if_walker = 0;
+    struct Interface* if_walker = 0;
 
     /* -- REQUIRES -- */
     assert(sr->if_list);
@@ -124,9 +124,9 @@ void setEthernetAddress(struct sr_instance* sr, const unsigned char* addr)
  *
  *---------------------------------------------------------------------*/
 
-void setEthernetIp(struct sr_instance* sr, uint32_t ip_nbo)
+void setEthernetIp(struct Instance* sr, uint32_t ip_nbo)
 {
-    struct sr_if* if_walker = 0;
+    struct Interface* if_walker = 0;
 
     /* -- REQUIRES -- */
     assert(sr->if_list);
@@ -148,9 +148,9 @@ void setEthernetIp(struct sr_instance* sr, uint32_t ip_nbo)
  *
  *---------------------------------------------------------------------*/
 
-void printInterfaceList(struct sr_instance* sr)
+void printInterfaceList(struct Instance* sr)
 {
-    struct sr_if* if_walker = 0;
+    struct Interface* if_walker = 0;
 
     if(sr->if_list == 0)
     {
@@ -177,7 +177,7 @@ void printInterfaceList(struct sr_instance* sr)
  *
  *---------------------------------------------------------------------*/
 
-void printInterface(struct sr_if* iface)
+void printInterface(struct Interface* iface)
 {
     struct in_addr ip_addr;
 

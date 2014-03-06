@@ -44,12 +44,12 @@
 #include "sha1.h"
 #include "vnscommand.h"
 
-static void logPacket(struct sr_instance* , uint8_t* , int );
-static int  arpRequestNotForUs(struct sr_instance* sr,
+static void logPacket(struct Instance* , uint8_t* , int );
+static int  arpRequestNotForUs(struct Instance* sr,
                                   uint8_t * packet /* lent */,
                                   unsigned int len,
                                   char* interface  /* lent */);
-int readFromServerExpect(struct sr_instance* sr /* borrowed */, int expected_cmd);
+int readFromServerExpect(struct Instance* sr /* borrowed */, int expected_cmd);
 
 /*-----------------------------------------------------------------------------
  * Method: sessionClosedHelp(..)
@@ -73,7 +73,7 @@ static void sessionClosedHelp()
  *  something other than zero on error
  *
  *---------------------------------------------------------------------------*/
-int connectToServer(struct sr_instance* sr,unsigned short port,
+int connectToServer(struct Instance* sr,unsigned short port,
                          char* server)
 {
     struct hostent *hp;
@@ -173,7 +173,7 @@ int connectToServer(struct sr_instance* sr,unsigned short port,
  *
  *---------------------------------------------------------------------------*/
 
-int handleHardwareInfo(struct sr_instance* sr, c_hwinfo* hwinfo)
+int handleHardwareInfo(struct Instance* sr, c_hwinfo* hwinfo)
 {
     int num_entries;
     int i = 0;
@@ -232,7 +232,7 @@ int handleHardwareInfo(struct sr_instance* sr, c_hwinfo* hwinfo)
     return num_entries;
 } /* -- handleHardwareInfo -- */
 
-int handleRoutingTable(struct sr_instance* sr, c_rtable* rtable) {
+int handleRoutingTable(struct Instance* sr, c_rtable* rtable) {
     char fn[7+IDSIZE+1];
     FILE* fp;
 
@@ -250,7 +250,7 @@ int handleRoutingTable(struct sr_instance* sr, c_rtable* rtable) {
     }
 }
 
-int handleAuthenticationRequest(struct sr_instance* sr, c_auth_request* req) {
+int handleAuthenticationRequest(struct Instance* sr, c_auth_request* req) {
 #define AUTH_KEY_LEN 64
 #define SHA1_LEN 20
     char auth_key[AUTH_KEY_LEN+1];
@@ -310,7 +310,7 @@ int handleAuthenticationRequest(struct sr_instance* sr, c_auth_request* req) {
     }
 }
 
-int handleAuthenticationStatus(struct sr_instance* sr, c_auth_status* status) {
+int handleAuthenticationStatus(struct Instance* sr, c_auth_status* status) {
     if(status->auth_ok)
         printf("successfully authenticated as %s\n", sr->user);
     else
@@ -326,12 +326,12 @@ int handleAuthenticationStatus(struct sr_instance* sr, c_auth_status* status) {
  *
  *---------------------------------------------------------------------------*/
 
-int readFromServer(struct sr_instance* sr /* borrowed */)
+int readFromServer(struct Instance* sr /* borrowed */)
 {
     return readFromServerExpect(sr, 0);
 }
 
-int readFromServerExpect(struct sr_instance* sr /* borrowed */, int expected_cmd)
+int readFromServerExpect(struct Instance* sr /* borrowed */, int expected_cmd)
 {
     int command, len;
     unsigned char *buf = 0;
@@ -430,7 +430,7 @@ int readFromServerExpect(struct sr_instance* sr /* borrowed */, int expected_cmd
             if ( arpRequestNotForUs(sr,
                     (buf+sizeof(c_packet_header)),
                     len - sizeof(c_packet_ethernet_header) +
-                    sizeof(struct sr_ethernet_hdr),
+                    sizeof(struct EthernetHeader),
                     (char*)(buf + sizeof(c_base))) )
             { break; }
 
@@ -442,7 +442,7 @@ int readFromServerExpect(struct sr_instance* sr /* borrowed */, int expected_cmd
             sr_handlepacket(sr,
                     (buf+sizeof(c_packet_header)),
                     len - sizeof(c_packet_ethernet_header) +
-                    sizeof(struct sr_ethernet_hdr),
+                    sizeof(struct EthernetHeader),
                     (char*)(buf + sizeof(c_base)));
 
             break;
@@ -515,19 +515,19 @@ int readFromServerExpect(struct sr_instance* sr /* borrowed */, int expected_cmd
  *----------------------------------------------------------------------------*/
 
 static int
-ethernetAddressesMatchInterface( struct sr_instance* sr, /* borrowed */
+ethernetAddressesMatchInterface( struct Instance* sr, /* borrowed */
                                 uint8_t* buf, /* borrowed */
                                 const char* name /* borrowed */ )
 {
-    struct sr_ethernet_hdr* ether_hdr = 0;
-    struct sr_if* iface = 0;
+    struct EthernetHeader* ether_hdr = 0;
+    struct Interface* iface = 0;
 
     /* -- REQUIRES -- */
     assert(sr);
     assert(buf);
     assert(name);
 
-    ether_hdr = (struct sr_ethernet_hdr*)buf;
+    ether_hdr = (struct EthernetHeader*)buf;
     iface = getInterface(sr, name);
 
     if ( iface == 0 ){
@@ -559,7 +559,7 @@ ethernetAddressesMatchInterface( struct sr_instance* sr, /* borrowed */
  *
  *---------------------------------------------------------------------------*/
 
-int sendPacket(struct sr_instance* sr /* borrowed */,
+int sendPacket(struct Instance* sr /* borrowed */,
                          uint8_t* buf /* borrowed */ ,
                          unsigned int len,
                          const char* iface /* borrowed */)
@@ -573,7 +573,7 @@ int sendPacket(struct sr_instance* sr /* borrowed */,
     assert(iface);
 
     /* don't waste my time ... */
-    if ( len < sizeof(struct sr_ethernet_hdr) ){
+    if ( len < sizeof(struct EthernetHeader) ){
         fprintf(stderr , "** Error: packet is wayy to short \n");
         return -1;
     }
@@ -614,7 +614,7 @@ int sendPacket(struct sr_instance* sr /* borrowed */,
  *
  *---------------------------------------------------------------------------*/
 
-void logPacket(struct sr_instance* sr, uint8_t* buf, int len )
+void logPacket(struct Instance* sr, uint8_t* buf, int len )
 {
     struct pcap_pkthdr h;
     int size;
@@ -641,22 +641,22 @@ void logPacket(struct sr_instance* sr, uint8_t* buf, int len )
  *
  *---------------------------------------------------------------------------*/
 
-int  arpRequestNotForUs(struct sr_instance* sr,
+int  arpRequestNotForUs(struct Instance* sr,
                            uint8_t * packet /* lent */,
                            unsigned int len,
                            char* interface  /* lent */)
 {
-    struct sr_if* iface = getInterface(sr, interface);
-    struct sr_ethernet_hdr* e_hdr = 0;
-    struct sr_arp_hdr*       a_hdr = 0;
+    struct Interface* iface = getInterface(sr, interface);
+    struct EthernetHeader* e_hdr = 0;
+    struct ArpHeader*       a_hdr = 0;
 
-    if (len < sizeof(struct sr_ethernet_hdr) + sizeof(struct sr_arp_hdr) )
+    if (len < sizeof(struct EthernetHeader) + sizeof(struct ArpHeader) )
     { return 0; }
 
     assert(iface);
 
-    e_hdr = (struct sr_ethernet_hdr*)packet;
-    a_hdr = (struct sr_arp_hdr*)(packet + sizeof(struct sr_ethernet_hdr));
+    e_hdr = (struct EthernetHeader*)packet;
+    a_hdr = (struct ArpHeader*)(packet + sizeof(struct EthernetHeader));
 
     if ( (e_hdr->ether_type == htons(ethertype_arp)) &&
             (a_hdr->ar_op      == htons(arp_op_request))   &&

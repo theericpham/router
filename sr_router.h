@@ -34,17 +34,17 @@
 #define ETHERNET_MIN_FRAME_SIZE 64 /*14 header 46 payload 4 checksum*/
 /*But why ... this seems to be wrong. Cus all the packets incoming say 42 bytes*/
 /* forward declare */
-struct sr_if;
-struct sr_rt;
+struct Interface;
+struct RoutingTable;
 
 /* ----------------------------------------------------------------------------
- * struct sr_instance
+ * struct Instance
  *
  * Encapsulation of the state for a single virtual router.
  *
  * -------------------------------------------------------------------------- */
 
-struct sr_instance
+struct Instance
 {
     int  sockfd;   /* socket to server */
     char user[32]; /* user name */
@@ -52,32 +52,32 @@ struct sr_instance
     char template[30]; /* template name if any */
     unsigned short topo_id;
     struct sockaddr_in sr_addr; /* address to server */
-    struct sr_if* if_list; /* list of interfaces */
-    struct sr_rt* routing_table; /* routing table */
-    struct sr_arpcache cache;   /* ARP cache */
+    struct Interface* if_list; /* list of interfaces */
+    struct RoutingTable* routing_table; /* routing table */
+    struct ArpCache cache;   /* ARP cache */
     pthread_attr_t attr;
     FILE* logfile;
 };
 
 /* -- sr_main.c -- */
-int verifyRoutingTable(struct sr_instance* sr);
+int verifyRoutingTable(struct Instance* sr);
 
 /* -- sr_vns_comm.c -- */
-int sendPacket(struct sr_instance* , uint8_t* , unsigned int , const char*);
-int connectToServer(struct sr_instance* ,unsigned short , char* );
-int readFromServer(struct sr_instance* );
+int sendPacket(struct Instance* , uint8_t* , unsigned int , const char*);
+int connectToServer(struct Instance* ,unsigned short , char* );
+int readFromServer(struct Instance* );
 
 /* -- sr_router.c -- */
-void sr_init(struct sr_instance* );
-void sr_handlepacket(struct sr_instance* , uint8_t * , unsigned int , char* );
+void sr_init(struct Instance* );
+void sr_handlepacket(struct Instance* , uint8_t * , unsigned int , char* );
 /*Caleb and Eric's added functions */
-void sr_handle_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface);
-void sr_handle_arp_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface);
+void sr_handle_ip_packet(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface);
+void sr_handle_arp_packet(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface);
 
 /* -- sr_if.c -- */
-void addInterface(struct sr_instance* , const char* );
-void setEthernetIp(struct sr_instance* , uint32_t );
-void setEthernetAddress(struct sr_instance* , const unsigned char* );
-void printInterfaceList(struct sr_instance* );
+void addInterface(struct Instance* , const char* );
+void setEthernetIp(struct Instance* , uint32_t );
+void setEthernetAddress(struct Instance* , const unsigned char* );
+void printInterfaceList(struct Instance* );
 
 #endif /* SR_ROUTER_H */

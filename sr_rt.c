@@ -22,14 +22,14 @@
 #include "sr_rt.h"
 #include "sr_router.h"
 
-#define ERR_NULL_RT -1
+#define ERR_NULL_ROUTING_TABLE -1
 
 /*---------------------------------------------------------------------
  * Method:
  *
  *---------------------------------------------------------------------*/
 
-int loadRoutingTable(struct sr_instance* sr,const char* filename)
+int loadRoutingTable(struct Instance* sr,const char* filename)
 {
     FILE* fp;
     char  line[BUFSIZ];
@@ -92,10 +92,10 @@ int loadRoutingTable(struct sr_instance* sr,const char* filename)
  *
  *---------------------------------------------------------------------*/
 
-void addRoutingTableEntry(struct sr_instance* sr, struct in_addr dest,
+void addRoutingTableEntry(struct Instance* sr, struct in_addr dest,
 struct in_addr gw, struct in_addr mask,char* if_name)
 {
-    struct sr_rt* rt_walker = 0;
+    struct RoutingTable* rt_walker = 0;
 
     /* -- REQUIRES -- */
     assert(if_name);
@@ -104,7 +104,7 @@ struct in_addr gw, struct in_addr mask,char* if_name)
     /* -- empty list special case -- */
     if(sr->routing_table == 0)
     {
-        sr->routing_table = (struct sr_rt*)malloc(sizeof(struct sr_rt));
+        sr->routing_table = (struct RoutingTable*)malloc(sizeof(struct RoutingTable));
         assert(sr->routing_table);
         sr->routing_table->next = 0;
         sr->routing_table->dest = dest;
@@ -121,7 +121,7 @@ struct in_addr gw, struct in_addr mask,char* if_name)
       rt_walker = rt_walker->next; 
     }
 
-    rt_walker->next = (struct sr_rt*)malloc(sizeof(struct sr_rt));
+    rt_walker->next = (struct RoutingTable*)malloc(sizeof(struct RoutingTable));
     assert(rt_walker->next);
     rt_walker = rt_walker->next;
 
@@ -138,9 +138,9 @@ struct in_addr gw, struct in_addr mask,char* if_name)
  *
  *---------------------------------------------------------------------*/
 
-void printRoutingTable(struct sr_instance* sr)
+void printRoutingTable(struct Instance* sr)
 {
-    struct sr_rt* rt_walker = 0;
+    struct RoutingTable* rt_walker = 0;
 
     if(sr->routing_table == 0)
     {
@@ -166,7 +166,7 @@ void printRoutingTable(struct sr_instance* sr)
  *
  *---------------------------------------------------------------------*/
 
-void printRoutingEntry(struct sr_rt* entry)
+void printRoutingEntry(struct RoutingTable* entry)
 {
     /* -- REQUIRES --*/
     assert(entry);
@@ -180,10 +180,10 @@ void printRoutingEntry(struct sr_rt* entry)
 } /* -- printRoutingEntry -- */
 
 /* return longest prefix match route if any */
-struct sr_rt* findLpmRoute(struct sr_instance* sr, uint32_t dest) {
+struct RoutingTable* findLpmRoute(struct Instance* sr, uint32_t dest) {
   int len = 0;
-  struct sr_rt* result;
-  struct sr_rt* iter;
+  struct RoutingTable* result;
+  struct RoutingTable* iter;
   
   
   for(iter = sr->routing_table; iter != 0; iter = iter->next) { /*Fixed: replaced cur with iter*/

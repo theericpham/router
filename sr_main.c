@@ -46,10 +46,10 @@ extern char* optarg;
 #define DEFAULT_TOPO 0
 
 static void usage(char* );
-static void initInstance(struct sr_instance* );
-static void destroyInstance(struct sr_instance* );
-static void setUser(struct sr_instance* );
-static void loadRoutingTableWrapper(struct sr_instance* sr, char* rtable);
+static void initInstance(struct Instance* );
+static void destroyInstance(struct Instance* );
+static void setUser(struct Instance* );
+static void loadRoutingTableWrapper(struct Instance* sr, char* rtable);
 
 /*-----------------------------------------------------------------------------
  *---------------------------------------------------------------------------*/
@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     unsigned int port = DEFAULT_PORT;
     unsigned int topo = DEFAULT_TOPO;
     char *logfile = 0;
-    struct sr_instance sr;
+    struct Instance sr;
 
     printf("Using %s\n", VERSION_INFO);
 
@@ -188,7 +188,7 @@ static void usage(char* argv0)
  * Scope: local
  *---------------------------------------------------------------------------*/
 
-void setUser(struct sr_instance* sr)
+void setUser(struct Instance* sr)
 {
     uid_t uid = getuid();
     struct passwd* pw = 0;
@@ -215,7 +215,7 @@ void setUser(struct sr_instance* sr)
  *
  *----------------------------------------------------------------------------*/
 
-static void destroyInstance(struct sr_instance* sr)
+static void destroyInstance(struct Instance* sr)
 {
     /* REQUIRES */
     assert(sr);
@@ -237,7 +237,7 @@ static void destroyInstance(struct sr_instance* sr)
  *
  *----------------------------------------------------------------------------*/
 
-static void initInstance(struct sr_instance* sr)
+static void initInstance(struct Instance* sr)
 {
     /* REQUIRES */
     assert(sr);
@@ -266,10 +266,10 @@ static void initInstance(struct sr_instance* sr)
  *
  *---------------------------------------------------------------------------*/
 
-int verifyRoutingTable(struct sr_instance* sr)
+int verifyRoutingTable(struct Instance* sr)
 {
-    struct sr_rt* rt_walker = 0;
-    struct sr_if* if_walker = 0;
+    struct RoutingTable* rt_walker = 0;
+    struct Interface* if_walker = 0;
     int ret = 0;
 
     /* -- REQUIRES --*/
@@ -302,7 +302,7 @@ int verifyRoutingTable(struct sr_instance* sr)
     return ret;
 } /* -- verifyRoutingTable -- */
 
-static void loadRoutingTableWrapper(struct sr_instance* sr, char* rtable) {
+static void loadRoutingTableWrapper(struct Instance* sr, char* rtable) {
     if(loadRoutingTable(sr, rtable) != 0) {
         fprintf(stderr,"Error setting up routing table from file %s\n",
                 rtable);

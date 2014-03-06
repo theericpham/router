@@ -21,28 +21,28 @@
 #include "sr_if.h"
 
 /* ----------------------------------------------------------------------------
- * struct sr_rt
+ * struct RoutingTable
  *
  * Node in the routing table 
  *
  * -------------------------------------------------------------------------- */
 
-struct sr_rt
+struct RoutingTable
 {
     struct in_addr dest;
     struct in_addr gw;
     struct in_addr mask;
     char   interface[sr_IFACE_NAMELEN];
-    struct sr_rt* next;
+    struct RoutingTable* next;
 };
 
 
-int loadRoutingTable(struct sr_instance*,const char*);
-void addRoutingTableEntry(struct sr_instance*, struct in_addr,struct in_addr,
+int loadRoutingTable(struct Instance*,const char*);
+void addRoutingTableEntry(struct Instance*, struct in_addr,struct in_addr,
                   struct in_addr, char*);
-void printRoutingTable(struct sr_instance* sr);
-void printRoutingEntry(struct sr_rt* entry);
+void printRoutingTable(struct Instance* sr);
+void printRoutingEntry(struct RoutingTable* entry);
 
 /* return longest prefix match for dest in routing table if one exists */
-struct sr_rt* findLpmRoute(struct sr_instance* sr, uint32_t dest);
+struct RoutingTable* findLpmRoute(struct Instance* sr, uint32_t dest);
 #endif  /* --  sr_RT_H -- */

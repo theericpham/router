@@ -26,29 +26,29 @@
 
 #include "sr_protocol.h"
 
-struct sr_instance;
+struct Instance;
 
 /* ----------------------------------------------------------------------------
- * struct sr_if
+ * struct Interface
  *
  * Node in the interface list for each router
  *
  * -------------------------------------------------------------------------- */
 
-struct sr_if
+struct Interface
 {
   char name[sr_IFACE_NAMELEN];
   unsigned char addr[ETHER_ADDR_LEN];
   uint32_t ip;
   uint32_t speed;
-  struct sr_if* next;
+  struct Interface* next;
 };
 
-struct sr_if* getInterface(struct sr_instance* sr, const char* name);
-void addInterface(struct sr_instance*, const char*);
-void setEthernetAddress(struct sr_instance*, const unsigned char*);
-void setEthernetIp(struct sr_instance*, uint32_t ip_nbo);
-void printInterfaceList(struct sr_instance*);
-void printInterface(struct sr_if*);
+struct Interface* getInterface(struct Instance* sr, const char* name);
+void addInterface(struct Instance*, const char*);
+void setEthernetAddress(struct Instance*, const unsigned char*);
+void setEthernetIp(struct Instance*, uint32_t ip_nbo);
+void printInterfaceList(struct Instance*);
+void printInterface(struct Interface*);
 
 #endif /* --  sr_INTERFACE_H -- */
