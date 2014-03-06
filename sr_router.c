@@ -79,8 +79,8 @@ int sr_send_icmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t co
   /* fill in icmp header */
   icmp_hdr->icmp_type = type;
   icmp_hdr->icmp_code = code;
-  icmp_hdr->icmp_sum       = 0;
-  icmp_hdr->icmp_sum       = cksum(response_packet + icmp_hdr_offset, icmp_hdr_len);
+  icmp_hdr->icmp_sum  = 0;
+  icmp_hdr->icmp_sum  = cksum(response_packet + icmp_hdr_offset, icmp_hdr_len);
   
   /* fill in ip header */
   ip_hdr->ip_v   = IP_VERSION_4;
@@ -115,14 +115,18 @@ int sr_send_icmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t co
   struct sr_arpentry* arp_entry = sr_arpcache_lookup(&(sr->cache), dest);
   if (arp_entry) {
     /* TODO fill in ethernet header and set if entry exists */
+    /* FIXED the following function call fills in ethernet header and sends packet 
+     *       sr_frame_and_send_packet defined above on line 47
+     */
     sr_frame_and_send_packet(sr, response_packet, len, arp_entry->mac, route->interface);
     free(arp_entry);
   }
   else {
     /* queue and handle arp request if no entry exists */
     struct sr_arpreq* arp_req = sr_arpcache_queuereq(&(sr->cache), dest, response_packet, len, route->interface);
-    /* arp_req->interface = router->interface; */
+    arp_req->interface = route->interface;
     /* TODO  what is router ? */
+    /* I think this should be route->interface (not router).  Your thoughts? */
     sr_handle_arp_req(sr, arp_req);
   }
   

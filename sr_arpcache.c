@@ -28,15 +28,17 @@ int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
   printf("*** Processing ARP Request ***\n");
   
   time_t now = time(NULL);
-  struct sr_ip_hdr_t* ip_hdr;
+  sr_ip_hdr_t* ip_hdr;
   int ethernet_hdr_offset = sizeof(sr_ethernet_hdr_t);
+  
   if (difftime(now, req->sent) > ARP_REQ_SEND_INTERVAL) {
     if (req->times_sent >= ARP_REQ_SEND_LIMIT) {
       struct sr_packet* packet;
       for (packet = req->packets; packet != NULL; packet = packet->next) {
-        /*ip_hdr = (sr_ip_hdr_t*) (packet + ethernet_hdr_offset);
-        if (sr_send_icmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)*/
         /* TODO: Fix this. What is packet->iface, and why does line 37 say incompat ptr type? */
+        /* Resolved incompat ptr type by removing 'struct' from ptr declaration */
+        ip_hdr = (sr_ip_hdr_t*) (packet + ethernet_hdr_offset);
+        if (sr_send_icmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
           ;/* print error message */
       }
       sr_arpreq_destroy(&(sr->cache), req);
