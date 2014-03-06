@@ -21,10 +21,10 @@
 
 #define IP_ADDR_LEN                 4
 
-int sr_frame_and_send_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name);
-int sr_send_icmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface);
+int frameAndSendPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name);
+int sendIcmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface);
 
-int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
+int handleArpRequest(struct sr_instance* sr, struct sr_arpreq* req) {
   printf("*** Processing ARP Request ***\n");
   
   time_t now = time(NULL);
@@ -38,10 +38,10 @@ int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
         /* TODO: Fix this. What is packet->iface, and why does line 37 say incompat ptr type? */
         /* Resolved incompat ptr type by removing 'struct' from ptr declaration */
         ip_hdr = (sr_ip_hdr_t*) (packet + ethernet_hdr_offset);
-        if (sr_send_icmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
+        if (sendIcmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
           ;/* print error message */
       }
-      sr_arpreq_destroy(&(sr->cache), req);
+      destroyArpRequest(&(sr->cache), req);
     }
   }
   else {
@@ -56,7 +56,7 @@ int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
     sr_arp_hdr_t* arp_hdr        = (sr_arp_hdr_t*) (ether_hdr + arp_hdr_offset);
     
     /* get interface */
-    struct sr_if* interface = sr_get_interface(sr, req->interface);
+    struct sr_if* interface = getInterface(sr, req->interface);
     
     ether_hdr->ether_type = ethertype_arp;
     
@@ -80,7 +80,7 @@ int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
     }
     
     /* send packet */
-    sr_send_packet(sr, response, len, interface->name);
+    sendPacket(sr, response, len, interface->name);
     
     /* update request info */
     req->sent = time(NULL);
@@ -95,12 +95,12 @@ int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req) {
   checking whether we should resend an request or destroy the arp request.
   See the comments in the header file for an idea of what it should look like.
 */
-void sr_arpcache_sweepreqs(struct sr_instance *sr) { 
+void arpcacheSweepRequests(struct sr_instance *sr) { 
   assert(sr);
   struct sr_arpreq* req = sr->cache.requests;
   int err;
   for (; req != NULL; req = req->next){
-    if ((err = sr_handle_arp_req(sr, req)) < 0)
+    if ((err = handleArpRequest(sr, req)) < 0)
       printf("*** Error %i Handling ARP Request\n", err);
   } 
 }
@@ -109,7 +109,7 @@ void sr_arpcache_sweepreqs(struct sr_instance *sr) {
 
 /* Checks if an IP->MAC mapping is in the cache. IP is in network byte order.
    You must free the returned structure if it is not NULL. */
-struct sr_arpentry *sr_arpcache_lookup(struct sr_arpcache *cache, uint32_t ip) {
+struct sr_arpentry *arpcacheLookup(struct sr_arpcache *cache, uint32_t ip) {
     pthread_mutex_lock(&(cache->lock));
     
     struct sr_arpentry *entry = NULL, *copy = NULL;
@@ -138,8 +138,8 @@ struct sr_arpentry *sr_arpcache_lookup(struct sr_arpcache *cache, uint32_t ip) {
    that corresponds to this ARP request. You should free the passed *packet.
    
    A pointer to the ARP request is returned; it should not be freed. The caller
-   can remove the ARP request from the queue by calling sr_arpreq_destroy. */
-struct sr_arpreq *sr_arpcache_queuereq(struct sr_arpcache *cache,
+   can remove the ARP request from the queue by calling destroyArpRequest. */
+struct sr_arpreq *arpcacheQueueRequest(struct sr_arpcache *cache,
                                        uint32_t ip,
                                        uint8_t *packet,           /* borrowed */
                                        unsigned int packet_len,
@@ -184,7 +184,7 @@ struct sr_arpreq *sr_arpcache_queuereq(struct sr_arpcache *cache,
    1) Looks up this IP in the request queue. If it is found, returns a pointer
       to the sr_arpreq with this IP. Otherwise, returns NULL.
    2) Inserts this IP to MAC mapping in the cache, and marks it valid. */
-struct sr_arpreq *sr_arpcache_insert(struct sr_arpcache *cache,
+struct sr_arpreq *arpcacheInsert(struct sr_arpcache *cache,
                                      unsigned char *mac,
                                      uint32_t ip)
 {
@@ -227,7 +227,7 @@ struct sr_arpreq *sr_arpcache_insert(struct sr_arpcache *cache,
 
 /* Frees all memory associated with this arp request entry. If this arp request
    entry is on the arp request queue, it is removed from the queue. */
-void sr_arpreq_destroy(struct sr_arpcache *cache, struct sr_arpreq *entry) {
+void destroyArpRequest(struct sr_arpcache *cache, struct sr_arpreq *entry) {
     pthread_mutex_lock(&(cache->lock));
     
     if (entry) {
@@ -266,7 +266,7 @@ void sr_arpreq_destroy(struct sr_arpcache *cache, struct sr_arpreq *entry) {
 }
 
 /* Prints out the ARP table. */
-void sr_arpcache_dump(struct sr_arpcache *cache) {
+void arpcacheDump(struct sr_arpcache *cache) {
     fprintf(stderr, "\nMAC            IP         ADDED                      VALID\n");
     fprintf(stderr, "-----------------------------------------------------------\n");
     
@@ -281,7 +281,7 @@ void sr_arpcache_dump(struct sr_arpcache *cache) {
 }
 
 /* Initialize table + table lock. Returns 0 on success. */
-int sr_arpcache_init(struct sr_arpcache *cache) {  
+int arpcacheInit(struct sr_arpcache *cache) {  
     /* Seed RNG to kick out a random entry if all entries full. */
     srand(time(NULL));
     
@@ -298,13 +298,13 @@ int sr_arpcache_init(struct sr_arpcache *cache) {
 }
 
 /* Destroys table + table lock. Returns 0 on success. */
-int sr_arpcache_destroy(struct sr_arpcache *cache) {
+int arpcacheDestroy(struct sr_arpcache *cache) {
     return pthread_mutex_destroy(&(cache->lock)) && pthread_mutexattr_destroy(&(cache->attr));
 }
 
 /* Thread which sweeps through the cache and invalidates entries that were added
    more than SR_ARPCACHE_TO seconds ago. */
-void *sr_arpcache_timeout(void *sr_ptr) {
+void *arpcacheTimeout(void *sr_ptr) {
     struct sr_instance *sr = sr_ptr;
     struct sr_arpcache *cache = &(sr->cache);
     
@@ -322,7 +322,7 @@ void *sr_arpcache_timeout(void *sr_ptr) {
             }
         }
         
-        sr_arpcache_sweepreqs(sr);
+        arpcacheSweepRequests(sr);
 
         pthread_mutex_unlock(&(cache->lock));
     }

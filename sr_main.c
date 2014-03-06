@@ -46,10 +46,10 @@ extern char* optarg;
 #define DEFAULT_TOPO 0
 
 static void usage(char* );
-static void sr_init_instance(struct sr_instance* );
-static void sr_destroy_instance(struct sr_instance* );
-static void sr_set_user(struct sr_instance* );
-static void sr_load_rt_wrap(struct sr_instance* sr, char* rtable);
+static void initInstance(struct sr_instance* );
+static void destroyInstance(struct sr_instance* );
+static void setUser(struct sr_instance* );
+static void loadRoutingTableWrapper(struct sr_instance* sr, char* rtable);
 
 /*-----------------------------------------------------------------------------
  *---------------------------------------------------------------------------*/
@@ -105,12 +105,12 @@ int main(int argc, char **argv)
     } /* -- while -- */
 
     /* -- zero out sr instance -- */
-    sr_init_instance(&sr);
+    initInstance(&sr);
 
     /* -- set up routing table from file -- */
     if(template == NULL) {
         sr.template[0] = '\0';
-        sr_load_rt_wrap(&sr, rtable);
+        loadRoutingTableWrapper(&sr, rtable);
     }
     else
         strncpy(sr.template, template, 30);
@@ -119,14 +119,14 @@ int main(int argc, char **argv)
     strncpy(sr.host,host,32);
 
     if(! user )
-    { sr_set_user(&sr); }
+    { setUser(&sr); }
     else
     { strncpy(sr.user, user, 32); }
 
     /* -- set up file pointer for logging of raw packets -- */
     if(logfile != 0)
     {
-        sr.logfile = sr_dump_open(logfile,0,PACKET_DUMP_SIZE);
+        sr.logfile = dump_open(logfile,0,PACKET_DUMP_SIZE);
         if(!sr.logfile)
         {
             fprintf(stderr,"Error opening up dump file %s\n",
@@ -142,27 +142,27 @@ int main(int argc, char **argv)
         Debug("Requesting topology %d\n", topo);
 
     /* connect to server and negotiate session */
-    if(sr_connect_to_server(&sr,port,server) == -1)
+    if(connectToServer(&sr,port,server) == -1)
     {
         return 1;
     }
 
     if(template != NULL && strcmp(rtable, "rtable.vrhost") == 0) { /* we've recv'd the rtable now, so read it in */
         Debug("Connected to new instantiation of topology template %s\n", template);
-        sr_load_rt_wrap(&sr, "rtable.vrhost");
+        loadRoutingTableWrapper(&sr, "rtable.vrhost");
     }
     else {
       /* Read from specified routing table */
-      sr_load_rt_wrap(&sr, rtable);
+      loadRoutingTableWrapper(&sr, rtable);
     }
 
     /* call router init (for arp subsystem etc.) */
     sr_init(&sr);
 
     /* -- whizbang main loop ;-) */
-    while( sr_read_from_server(&sr) == 1);
+    while( readFromServer(&sr) == 1);
 
-    sr_destroy_instance(&sr);
+    destroyInstance(&sr);
 
     return 0;
 }/* -- main -- */
@@ -184,11 +184,11 @@ static void usage(char* argv0)
 } /* -- usage -- */
 
 /*-----------------------------------------------------------------------------
- * Method: sr_set_user(..)
+ * Method: setUser(..)
  * Scope: local
  *---------------------------------------------------------------------------*/
 
-void sr_set_user(struct sr_instance* sr)
+void setUser(struct sr_instance* sr)
 {
     uid_t uid = getuid();
     struct passwd* pw = 0;
@@ -206,38 +206,38 @@ void sr_set_user(struct sr_instance* sr)
         strncpy(sr->user, pw->pw_name, 32);
     }
 
-} /* -- sr_set_user -- */
+} /* -- setUser -- */
 
 /*-----------------------------------------------------------------------------
- * Method: sr_destroy_instance(..)
+ * Method: destroyInstance(..)
  * Scope: Local
  *
  *
  *----------------------------------------------------------------------------*/
 
-static void sr_destroy_instance(struct sr_instance* sr)
+static void destroyInstance(struct sr_instance* sr)
 {
     /* REQUIRES */
     assert(sr);
 
     if(sr->logfile)
     {
-        sr_dump_close(sr->logfile);
+        dump_close(sr->logfile);
     }
 
     /*
-    fprintf(stderr,"sr_destroy_instance leaking memory\n");
+    fprintf(stderr,"destroyInstance leaking memory\n");
     */
-} /* -- sr_destroy_instance -- */
+} /* -- destroyInstance -- */
 
 /*-----------------------------------------------------------------------------
- * Method: sr_init_instance(..)
+ * Method: initInstance(..)
  * Scope: Local
  *
  *
  *----------------------------------------------------------------------------*/
 
-static void sr_init_instance(struct sr_instance* sr)
+static void initInstance(struct sr_instance* sr)
 {
     /* REQUIRES */
     assert(sr);
@@ -249,10 +249,10 @@ static void sr_init_instance(struct sr_instance* sr)
     sr->if_list = 0;
     sr->routing_table = 0;
     sr->logfile = 0;
-} /* -- sr_init_instance -- */
+} /* -- initInstance -- */
 
 /*-----------------------------------------------------------------------------
- * Method: sr_verify_routing_table()
+ * Method: verifyRoutingTable()
  * Scope: Global
  *
  * make sure the routing table is consistent with the interface list by
@@ -266,7 +266,7 @@ static void sr_init_instance(struct sr_instance* sr)
  *
  *---------------------------------------------------------------------------*/
 
-int sr_verify_routing_table(struct sr_instance* sr)
+int verifyRoutingTable(struct sr_instance* sr)
 {
     struct sr_rt* rt_walker = 0;
     struct sr_if* if_walker = 0;
@@ -300,10 +300,10 @@ int sr_verify_routing_table(struct sr_instance* sr)
     } /* -- while -- */
 
     return ret;
-} /* -- sr_verify_routing_table -- */
+} /* -- verifyRoutingTable -- */
 
-static void sr_load_rt_wrap(struct sr_instance* sr, char* rtable) {
-    if(sr_load_rt(sr, rtable) != 0) {
+static void loadRoutingTableWrapper(struct sr_instance* sr, char* rtable) {
+    if(loadRoutingTable(sr, rtable) != 0) {
         fprintf(stderr,"Error setting up routing table from file %s\n",
                 rtable);
         exit(1);
@@ -312,6 +312,6 @@ static void sr_load_rt_wrap(struct sr_instance* sr, char* rtable) {
 
     printf("Loading routing table\n");
     printf("---------------------------------------------\n");
-    sr_print_routing_table(sr);
+    printRoutingTable(sr);
     printf("---------------------------------------------\n");
 }

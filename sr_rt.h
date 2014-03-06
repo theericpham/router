@@ -37,12 +37,12 @@ struct sr_rt
 };
 
 
-int sr_load_rt(struct sr_instance*,const char*);
-void sr_add_rt_entry(struct sr_instance*, struct in_addr,struct in_addr,
+int loadRoutingTable(struct sr_instance*,const char*);
+void addRoutingTableEntry(struct sr_instance*, struct in_addr,struct in_addr,
                   struct in_addr, char*);
-void sr_print_routing_table(struct sr_instance* sr);
-void sr_print_routing_entry(struct sr_rt* entry);
+void printRoutingTable(struct sr_instance* sr);
+void printRoutingEntry(struct sr_rt* entry);
 
 /* return longest prefix match for dest in routing table if one exists */
-struct sr_rt* sr_find_lpm_route(struct sr_instance* sr, uint32_t dest);
+struct sr_rt* findLpmRoute(struct sr_instance* sr, uint32_t dest);
 #endif  /* --  sr_RT_H -- */

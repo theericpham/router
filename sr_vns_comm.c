@@ -8,7 +8,7 @@
  * and bert.
  *
  * 2003-Dec-03 09:00:52 AM :
- *   - bug sending packets read from client to sr_log_packet.  Packet was
+ *   - bug sending packets read from client to logPacket.  Packet was
  *     sent in network byte order ... expected host byte order.
  *     Reported by Matt Holliman & Sam Small. /mc
  *
@@ -19,7 +19,7 @@
  *
  *   2004-Jan-31 01:27:54 PM
  *    - William Chan (chanman@stanford.edu) submitted patch for UMR on
- *      sr_dump_packet(..)
+ *      dump_packet(..)
  *
  *---------------------------------------------------------------------------*/
 
@@ -44,25 +44,25 @@
 #include "sha1.h"
 #include "vnscommand.h"
 
-static void sr_log_packet(struct sr_instance* , uint8_t* , int );
-static int  sr_arp_req_not_for_us(struct sr_instance* sr,
+static void logPacket(struct sr_instance* , uint8_t* , int );
+static int  arpRequestNotForUs(struct sr_instance* sr,
                                   uint8_t * packet /* lent */,
                                   unsigned int len,
                                   char* interface  /* lent */);
-int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expected_cmd);
+int readFromServerExpect(struct sr_instance* sr /* borrowed */, int expected_cmd);
 
 /*-----------------------------------------------------------------------------
- * Method: sr_session_closed_help(..)
+ * Method: sessionClosedHelp(..)
  *
  * Provide debugging hints if VNS closes session
  *
  *----------------------------------------------------------------------------*/
-static void sr_session_closed_help()
+static void sessionClosedHelp()
 {
 }
 
 /*-----------------------------------------------------------------------------
- * Method: sr_connect_to_server()
+ * Method: connectToServer()
  * Scope: Global
  *
  * Connect to the virtual server
@@ -73,7 +73,7 @@ static void sr_session_closed_help()
  *  something other than zero on error
  *
  *---------------------------------------------------------------------------*/
-int sr_connect_to_server(struct sr_instance* sr,unsigned short port,
+int connectToServer(struct sr_instance* sr,unsigned short port,
                          char* server)
 {
     struct hostent *hp;
@@ -98,7 +98,7 @@ int sr_connect_to_server(struct sr_instance* sr,unsigned short port,
     /* grab hosts address from domain name */
     if ((hp = gethostbyname(server))==0)
     {
-        perror("gethostbyname:sr_client.c::sr_connect_to_server(..)");
+        perror("gethostbyname:sr_client.c::connectToServer(..)");
         return -1;
     }
 
@@ -108,7 +108,7 @@ int sr_connect_to_server(struct sr_instance* sr,unsigned short port,
     /* create socket */
     if ((sr->sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        perror("socket(..):sr_client.c::sr_connect_to_server(..)");
+        perror("socket(..):sr_client.c::connectToServer(..)");
         return -1;
     }
 
@@ -116,14 +116,14 @@ int sr_connect_to_server(struct sr_instance* sr,unsigned short port,
     if (connect(sr->sockfd, (struct sockaddr *)&(sr->sr_addr),
                 sizeof(sr->sr_addr)) < 0)
     {
-        perror("connect(..):sr_client.c::sr_connect_to_server(..)");
+        perror("connect(..):sr_client.c::connectToServer(..)");
         close(sr->sockfd);
         return -1;
     }
 
     /* wait for authentication to be completed (server sends the first message) */
-    if(sr_read_from_server_expect(sr, VNS_AUTH_REQUEST)!= 1 ||
-       sr_read_from_server_expect(sr, VNS_AUTH_STATUS) != 1)
+    if(readFromServerExpect(sr, VNS_AUTH_REQUEST)!= 1 ||
+       readFromServerExpect(sr, VNS_AUTH_STATUS) != 1)
         return -1; /* failed to receive expected message */
 
     if(strlen(sr->template) > 0) {
@@ -151,21 +151,21 @@ int sr_connect_to_server(struct sr_instance* sr,unsigned short port,
 
     if(send(sr->sockfd, buf, buf_len, 0) != buf_len)
     {
-        perror("send(..):sr_client.c::sr_connect_to_server()");
+        perror("send(..):sr_client.c::connectToServer()");
         return -1;
     }
 
     if(strlen(sr->template) > 0)
-        if(sr_read_from_server_expect(sr, VNS_RTABLE) != 1)
+        if(readFromServerExpect(sr, VNS_RTABLE) != 1)
             return -1; /* needed to get the rtable */
 
     return 0;
-} /* -- sr_connect_to_server -- */
+} /* -- connectToServer -- */
 
 
 
 /*-----------------------------------------------------------------------------
- * Method: sr_handle_hwinfo(..)
+ * Method: handleHardwareInfo(..)
  * scope: global
  *
  *
@@ -173,7 +173,7 @@ int sr_connect_to_server(struct sr_instance* sr,unsigned short port,
  *
  *---------------------------------------------------------------------------*/
 
-int sr_handle_hwinfo(struct sr_instance* sr, c_hwinfo* hwinfo)
+int handleHardwareInfo(struct sr_instance* sr, c_hwinfo* hwinfo)
 {
     int num_entries;
     int i = 0;
@@ -196,7 +196,7 @@ int sr_handle_hwinfo(struct sr_instance* sr, c_hwinfo* hwinfo)
                 break;
             case HWINTERFACE:
                 /*Debug("INTERFACE: %s\n",hwinfo->mHWInfo[i].value);*/
-                sr_add_interface(sr,hwinfo->mHWInfo[i].value);
+                addInterface(sr,hwinfo->mHWInfo[i].value);
                 break;
             case HWSPEED:
                 /* Debug("Speed: %d\n",
@@ -213,13 +213,13 @@ int sr_handle_hwinfo(struct sr_instance* sr, c_hwinfo* hwinfo)
             case HWETHIP:
                 /*Debug("IP: %s\n",inet_ntoa(
                             *((struct in_addr*)(hwinfo->mHWInfo[i].value))));*/
-                sr_set_ether_ip(sr,*((uint32_t*)hwinfo->mHWInfo[i].value));
+                setEthernetIp(sr,*((uint32_t*)hwinfo->mHWInfo[i].value));
                 break;
             case HWETHER:
                 /*Debug("\tHardware Address: ");
                 DebugMAC(hwinfo->mHWInfo[i].value);
                 Debug("\n"); */
-                sr_set_ether_addr(sr,(unsigned char*)hwinfo->mHWInfo[i].value);
+                setEthernetAddress(sr,(unsigned char*)hwinfo->mHWInfo[i].value);
                 break;
             default:
                 printf (" %d \n",ntohl(hwinfo->mHWInfo[i].mKey));
@@ -227,12 +227,12 @@ int sr_handle_hwinfo(struct sr_instance* sr, c_hwinfo* hwinfo)
     } /* -- for -- */
 
     printf("Router interfaces:\n");
-    sr_print_if_list(sr);
+    printInterfaceList(sr);
 
     return num_entries;
-} /* -- sr_handle_hwinfo -- */
+} /* -- handleHardwareInfo -- */
 
-int sr_handle_rtable(struct sr_instance* sr, c_rtable* rtable) {
+int handleRoutingTable(struct sr_instance* sr, c_rtable* rtable) {
     char fn[7+IDSIZE+1];
     FILE* fp;
 
@@ -250,7 +250,7 @@ int sr_handle_rtable(struct sr_instance* sr, c_rtable* rtable) {
     }
 }
 
-int sr_handle_auth_request(struct sr_instance* sr, c_auth_request* req) {
+int handleAuthenticationRequest(struct sr_instance* sr, c_auth_request* req) {
 #define AUTH_KEY_LEN 64
 #define SHA1_LEN 20
     char auth_key[AUTH_KEY_LEN+1];
@@ -296,7 +296,7 @@ int sr_handle_auth_request(struct sr_instance* sr, c_auth_request* req) {
         memcpy(ar->username + len_username, sha1.Message_Digest, SHA1_LEN);
 
         if(send(sr->sockfd, buf, len, 0) != len) {
-            perror("send(..):sr_client.c::sr_handle_auth_request()");
+            perror("send(..):sr_client.c::handleAuthenticationRequest()");
             ret = 0;
         }
         else
@@ -310,7 +310,7 @@ int sr_handle_auth_request(struct sr_instance* sr, c_auth_request* req) {
     }
 }
 
-int sr_handle_auth_status(struct sr_instance* sr, c_auth_status* status) {
+int handleAuthenticationStatus(struct sr_instance* sr, c_auth_status* status) {
     if(status->auth_ok)
         printf("successfully authenticated as %s\n", sr->user);
     else
@@ -319,19 +319,19 @@ int sr_handle_auth_status(struct sr_instance* sr, c_auth_status* status) {
 }
 
 /*-----------------------------------------------------------------------------
- * Method: sr_read_from_server(..)
+ * Method: readFromServer(..)
  * Scope: global
  *
  * Houses main while loop for communicating with the virtual router server.
  *
  *---------------------------------------------------------------------------*/
 
-int sr_read_from_server(struct sr_instance* sr /* borrowed */)
+int readFromServer(struct sr_instance* sr /* borrowed */)
 {
-    return sr_read_from_server_expect(sr, 0);
+    return readFromServerExpect(sr, 0);
 }
 
-int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expected_cmd)
+int readFromServerExpect(struct sr_instance* sr /* borrowed */, int expected_cmd)
 {
     int command, len;
     unsigned char *buf = 0;
@@ -359,7 +359,7 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
                 if ( errno == EINTR )
                 { continue; }
 
-                perror("recv(..):sr_client.c::sr_read_from_server");
+                perror("recv(..):sr_client.c::readFromServer");
                 return -1;
             }
             bytes_read += ret;
@@ -378,7 +378,7 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
 
     if((buf = malloc(len)) == 0)
     {
-        fprintf(stderr,"Error: out of memory (sr_read_from_server)\n");
+        fprintf(stderr,"Error: out of memory (readFromServer)\n");
         return -1;
     }
 
@@ -427,7 +427,7 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
             sr_pkt = (c_packet_ethernet_header *)buf;
 
             /* -- check if it is an ARP to another router if so drop   -- */
-            if ( sr_arp_req_not_for_us(sr,
+            if ( arpRequestNotForUs(sr,
                     (buf+sizeof(c_packet_header)),
                     len - sizeof(c_packet_ethernet_header) +
                     sizeof(struct sr_ethernet_hdr),
@@ -435,7 +435,7 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
             { break; }
 
             /* -- log packet -- */
-            sr_log_packet(sr, buf + sizeof(c_packet_header),
+            logPacket(sr, buf + sizeof(c_packet_header),
                     ntohl(sr_pkt->mLen) - sizeof(c_packet_header));
 
             /* -- pass to router, student's code should take over here -- */
@@ -452,7 +452,7 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
         case VNSCLOSE:
             fprintf(stderr,"VNS server closed session.\n");
             fprintf(stderr,"Reason: %s\n",((c_close*)buf)->mErrorMessage);
-            sr_session_closed_help();
+            sessionClosedHelp();
 
             if(buf)
             { free(buf); }
@@ -468,8 +468,8 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
             /* -------------     VNSHWINFO     -------------------- */
 
         case VNSHWINFO:
-            sr_handle_hwinfo(sr,(c_hwinfo*)buf);
-            if(sr_verify_routing_table(sr) != 0)
+            handleHardwareInfo(sr,(c_hwinfo*)buf);
+            if(verifyRoutingTable(sr) != 0)
             {
                 fprintf(stderr,"Routing table not consistent with hardware\n");
                 return -1;
@@ -479,19 +479,19 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
 
             /* ---------------- VNS_RTABLE ---------------- */
         case VNS_RTABLE:
-            if(!sr_handle_rtable(sr, (c_rtable*)buf))
+            if(!handleRoutingTable(sr, (c_rtable*)buf))
                 ret = -1;
             break;
 
             /* ------------- VNS_AUTH_REQUEST ------------- */
         case VNS_AUTH_REQUEST:
-            if(!sr_handle_auth_request(sr, (c_auth_request*)buf))
+            if(!handleAuthenticationRequest(sr, (c_auth_request*)buf))
                 ret = -1;
             break;
 
             /* ------------- VNS_AUTH_STATUS -------------- */
         case VNS_AUTH_STATUS:
-            if(!sr_handle_auth_status(sr, (c_auth_status*)buf))
+            if(!handleAuthenticationStatus(sr, (c_auth_status*)buf))
                 ret = -1;
             break;
 
@@ -504,10 +504,10 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
     if(buf)
     { free(buf); }
     return ret;
-}/* -- sr_read_from_server -- */
+}/* -- readFromServer -- */
 
 /*-----------------------------------------------------------------------------
- * Method: sr_ether_addrs_match_interface(..)
+ * Method: ethernetAddressesMatchInterface(..)
  * Scope: Local
  *
  * Make sure ethernet addresses are sane so we don't muck uo the system.
@@ -515,7 +515,7 @@ int sr_read_from_server_expect(struct sr_instance* sr /* borrowed */, int expect
  *----------------------------------------------------------------------------*/
 
 static int
-sr_ether_addrs_match_interface( struct sr_instance* sr, /* borrowed */
+ethernetAddressesMatchInterface( struct sr_instance* sr, /* borrowed */
                                 uint8_t* buf, /* borrowed */
                                 const char* name /* borrowed */ )
 {
@@ -528,7 +528,7 @@ sr_ether_addrs_match_interface( struct sr_instance* sr, /* borrowed */
     assert(name);
 
     ether_hdr = (struct sr_ethernet_hdr*)buf;
-    iface = sr_get_interface(sr, name);
+    iface = getInterface(sr, name);
 
     if ( iface == 0 ){
         fprintf( stderr, "** Error, interface %s, does not exist\n", name);
@@ -548,10 +548,10 @@ sr_ether_addrs_match_interface( struct sr_instance* sr, /* borrowed */
 
     return 1;
 
-} /* -- sr_ether_addrs_match_interface -- */
+} /* -- ethernetAddressesMatchInterface -- */
 
 /*-----------------------------------------------------------------------------
- * Method: sr_send_packet(..)
+ * Method: sendPacket(..)
  * Scope: Global
  *
  * Send a packet (ethernet header included!) of length 'len' to the server
@@ -559,7 +559,7 @@ sr_ether_addrs_match_interface( struct sr_instance* sr, /* borrowed */
  *
  *---------------------------------------------------------------------------*/
 
-int sr_send_packet(struct sr_instance* sr /* borrowed */,
+int sendPacket(struct sr_instance* sr /* borrowed */,
                          uint8_t* buf /* borrowed */ ,
                          unsigned int len,
                          const char* iface /* borrowed */)
@@ -589,9 +589,9 @@ int sr_send_packet(struct sr_instance* sr /* borrowed */,
             buf,len);
 
     /* -- log packet -- */
-    sr_log_packet(sr,buf,len);
+    logPacket(sr,buf,len);
 
-    if ( ! sr_ether_addrs_match_interface( sr, buf, iface) ){
+    if ( ! ethernetAddressesMatchInterface( sr, buf, iface) ){
         fprintf( stderr, "*** Error: problem with ethernet header, check log\n");
         free ( sr_pkt );
         return -1;
@@ -606,15 +606,15 @@ int sr_send_packet(struct sr_instance* sr /* borrowed */,
     free(sr_pkt);
 
     return 0;
-} /* -- sr_send_packet -- */
+} /* -- sendPacket -- */
 
 /*-----------------------------------------------------------------------------
- * Method: sr_log_packet()
+ * Method: logPacket()
  * Scope: Local
  *
  *---------------------------------------------------------------------------*/
 
-void sr_log_packet(struct sr_instance* sr, uint8_t* buf, int len )
+void logPacket(struct sr_instance* sr, uint8_t* buf, int len )
 {
     struct pcap_pkthdr h;
     int size;
@@ -631,22 +631,22 @@ void sr_log_packet(struct sr_instance* sr, uint8_t* buf, int len )
     h.caplen = size;
     h.len = (size < PACKET_DUMP_SIZE) ? size : PACKET_DUMP_SIZE;
 
-    sr_dump(sr->logfile, &h, buf);
+    dump(sr->logfile, &h, buf);
     fflush(sr->logfile);
-} /* -- sr_log_packet -- */
+} /* -- logPacket -- */
 
 /*-----------------------------------------------------------------------------
- * Method: sr_arp_req_not_for_us()
+ * Method: arpRequestNotForUs()
  * Scope: Local
  *
  *---------------------------------------------------------------------------*/
 
-int  sr_arp_req_not_for_us(struct sr_instance* sr,
+int  arpRequestNotForUs(struct sr_instance* sr,
                            uint8_t * packet /* lent */,
                            unsigned int len,
                            char* interface  /* lent */)
 {
-    struct sr_if* iface = sr_get_interface(sr, interface);
+    struct sr_if* iface = getInterface(sr, interface);
     struct sr_ethernet_hdr* e_hdr = 0;
     struct sr_arp_hdr*       a_hdr = 0;
 
@@ -664,4 +664,4 @@ int  sr_arp_req_not_for_us(struct sr_instance* sr,
     { return 1; }
 
     return 0;
-} /* -- sr_arp_req_not_for_us -- */
+} /* -- arpRequestNotForUs -- */

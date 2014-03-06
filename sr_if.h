@@ -44,11 +44,11 @@ struct sr_if
   struct sr_if* next;
 };
 
-struct sr_if* sr_get_interface(struct sr_instance* sr, const char* name);
-void sr_add_interface(struct sr_instance*, const char*);
-void sr_set_ether_addr(struct sr_instance*, const unsigned char*);
-void sr_set_ether_ip(struct sr_instance*, uint32_t ip_nbo);
-void sr_print_if_list(struct sr_instance*);
-void sr_print_if(struct sr_if*);
+struct sr_if* getInterface(struct sr_instance* sr, const char* name);
+void addInterface(struct sr_instance*, const char*);
+void setEthernetAddress(struct sr_instance*, const unsigned char*);
+void setEthernetIp(struct sr_instance*, uint32_t ip_nbo);
+void printInterfaceList(struct sr_instance*);
+void printInterface(struct sr_if*);
 
 #endif /* --  sr_INTERFACE_H -- */

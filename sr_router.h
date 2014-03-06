@@ -60,12 +60,12 @@ struct sr_instance
 };
 
 /* -- sr_main.c -- */
-int sr_verify_routing_table(struct sr_instance* sr);
+int verifyRoutingTable(struct sr_instance* sr);
 
 /* -- sr_vns_comm.c -- */
-int sr_send_packet(struct sr_instance* , uint8_t* , unsigned int , const char*);
-int sr_connect_to_server(struct sr_instance* ,unsigned short , char* );
-int sr_read_from_server(struct sr_instance* );
+int sendPacket(struct sr_instance* , uint8_t* , unsigned int , const char*);
+int connectToServer(struct sr_instance* ,unsigned short , char* );
+int readFromServer(struct sr_instance* );
 
 /* -- sr_router.c -- */
 void sr_init(struct sr_instance* );
@@ -75,9 +75,9 @@ void sr_handle_ip_packet(struct sr_instance* sr, uint8_t* packet, unsigned int l
 void sr_handle_arp_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, char* interface);
 
 /* -- sr_if.c -- */
-void sr_add_interface(struct sr_instance* , const char* );
-void sr_set_ether_ip(struct sr_instance* , uint32_t );
-void sr_set_ether_addr(struct sr_instance* , const unsigned char* );
-void sr_print_if_list(struct sr_instance* );
+void addInterface(struct sr_instance* , const char* );
+void setEthernetIp(struct sr_instance* , uint32_t );
+void setEthernetAddress(struct sr_instance* , const unsigned char* );
+void printInterfaceList(struct sr_instance* );
 
 #endif /* SR_ROUTER_H */

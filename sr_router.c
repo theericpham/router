@@ -38,22 +38,22 @@
  *
  *---------------------------------------------------------------------*/
 
-int sr_send_icmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface); /*Fixed*/
-int sr_frame_and_send_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface);
+int sendIcmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface); /*Fixed*/
+int frameAndSendPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface);
 
 /* 
  *  Set ethernet frame for a packet by filling in MAC addresses and send the packet 
  */
-int sr_frame_and_send_packet(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name) {
+int frameAndSendPacket(struct sr_instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name) {
   /* get the interface to forward from */
   sr_ethernet_hdr_t* frame = (sr_ethernet_hdr_t*) packet;
-  struct sr_if* interface  = sr_get_interface(sr, name);
+  struct sr_if* interface  = getInterface(sr, name);
   
   /* set MAC addresses */
   memcpy(frame->ether_dhost, mac, ETHER_ADDR_LEN);              /* dest specified by args */
   memcpy(frame->ether_shost, interface->addr, ETHER_ADDR_LEN);  /* src is interface MAC address */
     
-  sr_send_packet(sr, packet, len, name);
+  sendPacket(sr, packet, len, name);
   
   return 0;
 }
@@ -61,7 +61,7 @@ int sr_frame_and_send_packet(struct sr_instance* sr, uint8_t* packet, unsigned i
 /* 
  *  Send an ICMP message with type and code fields to dest from router interface 
  */
-int sr_send_icmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface) {
+int sendIcmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface) {
   int ether_hdr_len = sizeof(sr_ethernet_hdr_t);
   int ip_hdr_len    = sizeof(sr_ip_hdr_t);
   int icmp_hdr_len  = sizeof(sr_icmp_hdr_t);
@@ -90,10 +90,10 @@ int sr_send_icmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t co
   ip_hdr->ip_id  = 0;
   ip_hdr->ip_off = IP_DF;
   ip_hdr->ip_ttl = IP_DEFAULT_TTL;
-  ip_hdr->ip_p   = ip_protocol_icmp;
+  ip_hdr->ip_p   = ipProtocol_icmp;
   
   /* get the outgoing interface and set ip src and dst */
-  struct sr_if* src_if = sr_get_interface(sr, interface);
+  struct sr_if* src_if = getInterface(sr, interface);
   ip_hdr->ip_dst = dest;
   ip_hdr->ip_src = src_if->ip;
   
@@ -105,29 +105,29 @@ int sr_send_icmp(struct sr_instance* sr, uint32_t dest, uint8_t type, uint8_t co
   ether_hdr->ether_type = ethertype_ip;
   
   /* find route to dest */
-  struct sr_rt* route = sr_find_lpm_route(sr, dest);
+  struct sr_rt* route = findLpmRoute(sr, dest);
   if (route == NULL) {
     /* TODO print error or send ICMP? */
     return -1;
   }
   
   /* find ARP entry for MAC */
-  struct sr_arpentry* arp_entry = sr_arpcache_lookup(&(sr->cache), dest);
+  struct sr_arpentry* arp_entry = arpcacheLookup(&(sr->cache), dest);
   if (arp_entry) {
     /* TODO fill in ethernet header and set if entry exists */
     /* FIXED the following function call fills in ethernet header and sends packet 
-     *       sr_frame_and_send_packet defined above on line 47
+     *       frameAndSendPacket defined above on line 47
      */
-    sr_frame_and_send_packet(sr, response_packet, len, arp_entry->mac, route->interface);
+    frameAndSendPacket(sr, response_packet, len, arp_entry->mac, route->interface);
     free(arp_entry);
   }
   else {
     /* queue and handle arp request if no entry exists */
-    struct sr_arpreq* arp_req = sr_arpcache_queuereq(&(sr->cache), dest, response_packet, len, route->interface);
+    struct sr_arpreq* arp_req = arpcacheQueueRequest(&(sr->cache), dest, response_packet, len, route->interface);
     arp_req->interface = route->interface;
     /* TODO  what is router ? */
     /* I think this should be route->interface (not router).  Your thoughts? */
-    sr_handle_arp_req(sr, arp_req);
+    handleArpRequest(sr, arp_req);
   }
   
   return 0;
@@ -147,7 +147,7 @@ void sr_init(struct sr_instance* sr)
     assert(sr);
 
     /* Initialize cache and cache cleanup thread */
-    sr_arpcache_init(&(sr->cache));
+    arpcacheInit(&(sr->cache));
 
     pthread_attr_init(&(sr->attr));
     pthread_attr_setdetachstate(&(sr->attr), PTHREAD_CREATE_JOINABLE);
@@ -155,7 +155,7 @@ void sr_init(struct sr_instance* sr)
     pthread_attr_setscope(&(sr->attr), PTHREAD_SCOPE_SYSTEM);
     pthread_t thread;
 
-    pthread_create(&thread, &(sr->attr), sr_arpcache_timeout, sr);
+    pthread_create(&thread, &(sr->attr), arpcacheTimeout, sr);
     
     /* Add initialization code here! */
 

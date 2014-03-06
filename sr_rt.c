@@ -29,7 +29,7 @@
  *
  *---------------------------------------------------------------------*/
 
-int sr_load_rt(struct sr_instance* sr,const char* filename)
+int loadRoutingTable(struct sr_instance* sr,const char* filename)
 {
     FILE* fp;
     char  line[BUFSIZ];
@@ -81,18 +81,18 @@ int sr_load_rt(struct sr_instance* sr,const char* filename)
             sr->routing_table = 0;
             clear_routing_table = 1;
         }
-        sr_add_rt_entry(sr,dest_addr,gw_addr,mask_addr,iface);
+        addRoutingTableEntry(sr,dest_addr,gw_addr,mask_addr,iface);
     } /* -- while -- */
 
     return 0; /* -- success -- */
-} /* -- sr_load_rt -- */
+} /* -- loadRoutingTable -- */
 
 /*---------------------------------------------------------------------
  * Method:
  *
  *---------------------------------------------------------------------*/
 
-void sr_add_rt_entry(struct sr_instance* sr, struct in_addr dest,
+void addRoutingTableEntry(struct sr_instance* sr, struct in_addr dest,
 struct in_addr gw, struct in_addr mask,char* if_name)
 {
     struct sr_rt* rt_walker = 0;
@@ -138,7 +138,7 @@ struct in_addr gw, struct in_addr mask,char* if_name)
  *
  *---------------------------------------------------------------------*/
 
-void sr_print_routing_table(struct sr_instance* sr)
+void printRoutingTable(struct sr_instance* sr)
 {
     struct sr_rt* rt_walker = 0;
 
@@ -152,21 +152,21 @@ void sr_print_routing_table(struct sr_instance* sr)
 
     rt_walker = sr->routing_table;
     
-    sr_print_routing_entry(rt_walker);
+    printRoutingEntry(rt_walker);
     while(rt_walker->next)
     {
         rt_walker = rt_walker->next; 
-        sr_print_routing_entry(rt_walker);
+        printRoutingEntry(rt_walker);
     }
 
-} /* -- sr_print_routing_table -- */
+} /* -- printRoutingTable -- */
 
 /*---------------------------------------------------------------------
  * Method:
  *
  *---------------------------------------------------------------------*/
 
-void sr_print_routing_entry(struct sr_rt* entry)
+void printRoutingEntry(struct sr_rt* entry)
 {
     /* -- REQUIRES --*/
     assert(entry);
@@ -177,10 +177,10 @@ void sr_print_routing_entry(struct sr_rt* entry)
     printf("%s\t",inet_ntoa(entry->mask));
     printf("%s\n",entry->interface);
 
-} /* -- sr_print_routing_entry -- */
+} /* -- printRoutingEntry -- */
 
 /* return longest prefix match route if any */
-struct sr_rt* sr_find_lpm_route(struct sr_instance* sr, uint32_t dest) {
+struct sr_rt* findLpmRoute(struct sr_instance* sr, uint32_t dest) {
   int len = 0;
   struct sr_rt* result;
   struct sr_rt* iter;

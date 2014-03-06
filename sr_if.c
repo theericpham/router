@@ -26,7 +26,7 @@
 #include "sr_router.h"
 
 /*--------------------------------------------------------------------- 
- * Method: sr_get_interface
+ * Method: getInterface
  * Scope: Global
  *
  * Given an interface name return the interface record or 0 if it doesn't
@@ -34,7 +34,7 @@
  *
  *---------------------------------------------------------------------*/
 
-struct sr_if* sr_get_interface(struct sr_instance* sr, const char* name)
+struct sr_if* getInterface(struct sr_instance* sr, const char* name)
 {
     struct sr_if* if_walker = 0;
 
@@ -52,17 +52,17 @@ struct sr_if* sr_get_interface(struct sr_instance* sr, const char* name)
     }
 
     return 0;
-} /* -- sr_get_interface -- */
+} /* -- getInterface -- */
 
 /*--------------------------------------------------------------------- 
- * Method: sr_add_interface(..)
+ * Method: addInterface(..)
  * Scope: Global
  *
  * Add and interface to the router's list
  *
  *---------------------------------------------------------------------*/
 
-void sr_add_interface(struct sr_instance* sr, const char* name)
+void addInterface(struct sr_instance* sr, const char* name)
 {
     struct sr_if* if_walker = 0;
 
@@ -90,7 +90,7 @@ void sr_add_interface(struct sr_instance* sr, const char* name)
     if_walker = if_walker->next;
     strncpy(if_walker->name,name,sr_IFACE_NAMELEN);
     if_walker->next = 0;
-} /* -- sr_add_interface -- */ 
+} /* -- addInterface -- */ 
 
 /*--------------------------------------------------------------------- 
  * Method: sr_sat_ether_addr(..)
@@ -100,7 +100,7 @@ void sr_add_interface(struct sr_instance* sr, const char* name)
  *
  *---------------------------------------------------------------------*/
 
-void sr_set_ether_addr(struct sr_instance* sr, const unsigned char* addr)
+void setEthernetAddress(struct sr_instance* sr, const unsigned char* addr)
 {
     struct sr_if* if_walker = 0;
 
@@ -114,17 +114,17 @@ void sr_set_ether_addr(struct sr_instance* sr, const unsigned char* addr)
     /* -- copy address -- */
     memcpy(if_walker->addr,addr,6);
 
-} /* -- sr_set_ether_addr -- */
+} /* -- setEthernetAddress -- */
 
 /*--------------------------------------------------------------------- 
- * Method: sr_set_ether_ip(..)
+ * Method: setEthernetIp(..)
  * Scope: Global
  *
  * set the IP address of the LAST interface in the interface list
  *
  *---------------------------------------------------------------------*/
 
-void sr_set_ether_ip(struct sr_instance* sr, uint32_t ip_nbo)
+void setEthernetIp(struct sr_instance* sr, uint32_t ip_nbo)
 {
     struct sr_if* if_walker = 0;
 
@@ -138,17 +138,17 @@ void sr_set_ether_ip(struct sr_instance* sr, uint32_t ip_nbo)
     /* -- copy address -- */
     if_walker->ip = ip_nbo;
 
-} /* -- sr_set_ether_ip -- */
+} /* -- setEthernetIp -- */
 
 /*--------------------------------------------------------------------- 
- * Method: sr_print_if_list(..)
+ * Method: printInterfaceList(..)
  * Scope: Global
  *
  * print out the list of interfaces to stdout
  *
  *---------------------------------------------------------------------*/
 
-void sr_print_if_list(struct sr_instance* sr)
+void printInterfaceList(struct sr_instance* sr)
 {
     struct sr_if* if_walker = 0;
 
@@ -160,24 +160,24 @@ void sr_print_if_list(struct sr_instance* sr)
 
     if_walker = sr->if_list;
     
-    sr_print_if(if_walker);
+    printInterface(if_walker);
     while(if_walker->next)
     {
         if_walker = if_walker->next; 
-        sr_print_if(if_walker);
+        printInterface(if_walker);
     }
 
-} /* -- sr_print_if_list -- */
+} /* -- printInterfaceList -- */
 
 /*--------------------------------------------------------------------- 
- * Method: sr_print_if(..)
+ * Method: printInterface(..)
  * Scope: Global
  *
  * print out a single interface to stdout
  *
  *---------------------------------------------------------------------*/
 
-void sr_print_if(struct sr_if* iface)
+void printInterface(struct sr_if* iface)
 {
     struct in_addr ip_addr;
 
@@ -191,4 +191,4 @@ void sr_print_if(struct sr_if* iface)
     DebugMAC(iface->addr);
     Debug("\n");
     Debug("\tinet addr %s\n",inet_ntoa(ip_addr));
-} /* -- sr_print_if -- */
+} /* -- printInterface -- */

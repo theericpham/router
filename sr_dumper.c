@@ -26,7 +26,7 @@ sf_write_header(FILE *fp, int linktype, int thiszone, int snaplen)
  * Initialize so that sf_write_header() will output to the file named 'fname'.
  */
 FILE *
-sr_dump_open(const char *fname, int thiszone, int snaplen)
+dump_open(const char *fname, int thiszone, int snaplen)
 {       
   FILE *fp;
  
@@ -35,7 +35,7 @@ sr_dump_open(const char *fname, int thiszone, int snaplen)
         else {
                 fp = fopen(fname, "w");
                 if (fp == NULL) {
-                        fprintf(stderr, "sr_dump_open: can't open %s",
+                        fprintf(stderr, "dump_open: can't open %s",
                             fname);
                         return (NULL);
                 }
@@ -50,7 +50,7 @@ sr_dump_open(const char *fname, int thiszone, int snaplen)
  * Output a packet to the initialized dump file.
  */
 void
-sr_dump(FILE *fp, const struct pcap_pkthdr *h, const unsigned char *sp)
+dump(FILE *fp, const struct pcap_pkthdr *h, const unsigned char *sp)
 {
         struct pcap_sf_pkthdr sf_hdr;
 
@@ -64,7 +64,7 @@ sr_dump(FILE *fp, const struct pcap_pkthdr *h, const unsigned char *sp)
 }
 
 void
-sr_dump_close(FILE *fp)
+dump_close(FILE *fp)
 {
   fclose(fp);
 }

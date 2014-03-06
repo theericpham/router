@@ -53,7 +53,7 @@
    all packets waiting on this ARP request), you must fill out the following
    function that is called every second and is defined in sr_arpcache.c:
 
-   void sr_arpcache_sweepreqs(struct sr_instance *sr) {
+   void arpcacheSweepRequests(struct sr_instance *sr) {
        for each request on sr->cache.requests:
            handle_arpreq(request)
    }
@@ -111,7 +111,7 @@ struct sr_arpcache {
 
 /* Checks if an IP->MAC mapping is in the cache. IP is in network byte order. 
    You must free the returned structure if it is not NULL. */
-struct sr_arpentry *sr_arpcache_lookup(struct sr_arpcache *cache, uint32_t ip);
+struct sr_arpentry* arpcacheLookup(struct sr_arpcache *cache, uint32_t ip);
 
 /* Adds an ARP request to the ARP request queue. If the request is already on
    the queue, adds the packet to the linked list of packets for this sr_arpreq
@@ -119,8 +119,8 @@ struct sr_arpentry *sr_arpcache_lookup(struct sr_arpcache *cache, uint32_t ip);
    freed by the caller.
 
    A pointer to the ARP request is returned; it should be freed. The caller
-   can remove the ARP request from the queue by calling sr_arpreq_destroy. */
-struct sr_arpreq *sr_arpcache_queuereq(struct sr_arpcache *cache,
+   can remove the ARP request from the queue by calling destroyArpRequest. */
+struct sr_arpreq* arpcacheQueueRequest(struct sr_arpcache *cache,
                          uint32_t ip,
                          uint8_t *packet,               /* borrowed */
                          unsigned int packet_len,
@@ -130,27 +130,27 @@ struct sr_arpreq *sr_arpcache_queuereq(struct sr_arpcache *cache,
    1) Looks up this IP in the request queue. If it is found, returns a pointer
       to the sr_arpreq with this IP. Otherwise, returns NULL.
    2) Inserts this IP to MAC mapping in the cache, and marks it valid. */
-struct sr_arpreq *sr_arpcache_insert(struct sr_arpcache *cache,
+struct sr_arpreq *arpcacheInsert(struct sr_arpcache *cache,
                                      unsigned char *mac,
                                      uint32_t ip);
 
 /* Frees all memory associated with this arp request entry. If this arp request
    entry is on the arp request queue, it is removed from the queue. */
-void sr_arpreq_destroy(struct sr_arpcache *cache, struct sr_arpreq *entry);
+void destroyArpRequest(struct sr_arpcache *cache, struct sr_arpreq *entry);
 
 /* Prints out the ARP table. */
-void sr_arpcache_dump(struct sr_arpcache *cache);
+void arpcacheDump(struct sr_arpcache *cache);
 
 /* You shouldn't have to call these methods--they're already called in the
    starter code for you. The init call is a constructor, the destroy call is
    a destructor, and a cleanup thread times out cache entries every 15
    seconds. */
 
-int   sr_arpcache_init(struct sr_arpcache *cache);
-int   sr_arpcache_destroy(struct sr_arpcache *cache);
-void *sr_arpcache_timeout(void *cache_ptr);
+int   arpcacheInit(struct sr_arpcache *cache);
+int   arpcacheDestroy(struct sr_arpcache *cache);
+void *arpcacheTimeout(void *cache_ptr);
 
 /* Handles and sends ARP requests waiting in the queue. */
-int sr_handle_arp_req(struct sr_instance* sr, struct sr_arpreq* req);
+int handleArpRequest(struct sr_instance* sr, struct sr_arpreq* req);
 
 #endif
