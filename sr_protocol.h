@@ -79,18 +79,18 @@
 
 /* Structure of a ICMP header
  */
-struct IcmpHeader {
+struct IcmpHeaderStruct {
   uint8_t icmp_type;
   uint8_t icmp_code;
   uint16_t icmp_sum;
   
 } __attribute__ ((packed)) ;
-typedef struct IcmpHeader IcmpHeader_t;
+typedef struct IcmpHeaderStruct IcmpHeader;
 
 
 /* Structure of a type3 ICMP header
  */
-struct IcmpT3Header {
+struct IcmpT3HeaderStruct {
   uint8_t icmp_type;
   uint8_t icmp_code;
   uint16_t icmp_sum;
@@ -99,7 +99,7 @@ struct IcmpT3Header {
   uint8_t data[ICMP_DATA_SIZE];
 
 } __attribute__ ((packed)) ;
-typedef struct IcmpT3Header IcmpT3Header_t;
+typedef struct IcmpT3HeaderStruct IcmpT3Header;
 
 
 
@@ -107,7 +107,7 @@ typedef struct IcmpT3Header IcmpT3Header_t;
 /*
  * Structure of an internet header, naked of options.
  */
-struct IpHeader
+struct IpHeaderStruct
   {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
     unsigned int ip_hl:4;		/* header length */
@@ -131,13 +131,13 @@ struct IpHeader
     uint16_t ip_sum;			/* checksum */
     uint32_t ip_src, ip_dst;	/* source and dest address */
   } __attribute__ ((packed)) ;
-typedef struct IpHeader IpHeader_t;
+typedef struct IpHeaderStruct IpHeader;
 
 /* 
  *  Ethernet packet header prototype.  Too many O/S's define this differently.
  *  Easy enough to solve that and define it here.
  */
-struct EthernetHeader
+struct EthernetHeaderStruct
 {
 #ifndef ETHER_ADDR_LEN
 #define ETHER_ADDR_LEN 6
@@ -146,7 +146,7 @@ struct EthernetHeader
     uint8_t  ether_shost[ETHER_ADDR_LEN];    /* source ethernet address */
     uint16_t ether_type;                     /* packet type ID */
 } __attribute__ ((packed)) ;
-typedef struct EthernetHeader EthernetHeader_t;
+typedef struct EthernetHeaderStruct EthernetHeader;
 
 
 
@@ -170,7 +170,7 @@ enum ArpHardwareFormat {
 };
 
 
-struct ArpHeader
+struct ArpHeaderStruct
 {
     unsigned short  ar_hrd;             /* format of hardware address   */
     unsigned short  ar_pro;             /* format of protocol address   */
@@ -182,7 +182,7 @@ struct ArpHeader
     unsigned char   ar_tha[ETHER_ADDR_LEN];   /* target hardware address      */
     uint32_t        ar_tip;             /* target IP address            */
 } __attribute__ ((packed)) ;
-typedef struct ArpHeader ArpHeader_t;
+typedef struct ArpHeaderStruct ArpHeader;
 
 #define sr_IFACE_NAMELEN 32
 

@@ -28,8 +28,8 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* req) {
   printf("*** Processing ARP Request ***\n");
   
   time_t now = time(NULL);
-  IpHeader_t* ip_hdr;
-  int ethernet_hdr_offset = sizeof(EthernetHeader_t);
+  IpHeader* ip_hdr;
+  int ethernet_hdr_offset = sizeof(EthernetHeader);
   
   if (difftime(now, req->sent) > ARP_REQUEST_SEND_INTERVAL) {
     if (req->times_sent >= ARP_REQUEST_SEND_LIMIT) {
@@ -37,7 +37,7 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* req) {
       for (packet = req->packets; packet != NULL; packet = packet->next) {
         /* TODO: Fix this. What is packet->iface, and why does line 37 say incompat ptr type? */
         /* Resolved incompat ptr type by removing 'struct' from ptr declaration */
-        ip_hdr = (IpHeader_t*) (packet + ethernet_hdr_offset);
+        ip_hdr = (IpHeader*) (packet + ethernet_hdr_offset);
         if (sendIcmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
           ;/* print error message */
       }
@@ -45,15 +45,15 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* req) {
     }
   }
   else {
-    int ether_hdr_len  = sizeof(EthernetHeader_t);
-    int arp_hdr_len    = sizeof(ArpHeader_t);
+    int ether_hdr_len  = sizeof(EthernetHeader);
+    int arp_hdr_len    = sizeof(ArpHeader);
     int arp_hdr_offset = ether_hdr_len;
     int len            = ether_hdr_len + arp_hdr_len;
     
     /* create headers */
     uint8_t* response = (uint8_t*) malloc(len);
-    EthernetHeader_t* ether_hdr = (EthernetHeader_t*) req; /*Fixed: was response*/
-    ArpHeader_t* arp_hdr        = (ArpHeader_t*) (ether_hdr + arp_hdr_offset);
+    EthernetHeader* ether_hdr = (EthernetHeader*) req; /*Fixed: was response*/
+    ArpHeader* arp_hdr        = (ArpHeader*) (ether_hdr + arp_hdr_offset);
     
     /* get interface */
     struct Interface* interface = getInterface(sr, req->interface);

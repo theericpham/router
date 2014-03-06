@@ -46,7 +46,7 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, u
  */
 int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name) {
   /* get the interface to forward from */
-  EthernetHeader_t* frame = (EthernetHeader_t*) packet;
+  EthernetHeader* frame = (EthernetHeader*) packet;
   struct Interface* interface  = getInterface(sr, name);
   
   /* set MAC addresses */
@@ -62,9 +62,9 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, u
  *  Send an ICMP message with type and code fields to dest from router interface 
  */
 int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface) {
-  int ether_hdr_len = sizeof(EthernetHeader_t);
-  int ip_hdr_len    = sizeof(IpHeader_t);
-  int icmp_hdr_len  = sizeof(IcmpHeader_t);
+  int ether_hdr_len = sizeof(EthernetHeader);
+  int ip_hdr_len    = sizeof(IpHeader);
+  int icmp_hdr_len  = sizeof(IcmpHeader);
   int len           = ether_hdr_len + ip_hdr_len + icmp_hdr_len;
   
   int ip_hdr_offset   = ether_hdr_len;
@@ -72,9 +72,9 @@ int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, cha
   
   /* construct headers */
   uint8_t* response_packet = (uint8_t*) malloc(len);
-  IcmpHeader_t* icmp_hdr  = (IcmpHeader_t*) (response_packet + icmp_hdr_offset);
-  IpHeader_t* ip_hdr      = (IpHeader_t*) (response_packet + ip_hdr_offset);
-  EthernetHeader_t* ether_hdr = (EthernetHeader_t*) (response_packet);
+  IcmpHeader* icmp_hdr  = (IcmpHeader*) (response_packet + icmp_hdr_offset);
+  IpHeader* ip_hdr      = (IpHeader*) (response_packet + ip_hdr_offset);
+  EthernetHeader* ether_hdr = (EthernetHeader*) (response_packet);
   
   /* fill in icmp header */
   icmp_hdr->icmp_type = type;
@@ -214,10 +214,10 @@ void sr_handle_ip_packet(struct Instance* sr, uint8_t* packet, unsigned int len,
     /* Should we also send an ICMP type 12 code 2 bad header length? */
   
   /*Need to encapsulate the raw frame in packet into an IP header object*/
-  IpHeader_t* ip_header  = (IpHeader_t*)packet;
+  IpHeader* ip_header  = (IpHeader*)packet;
   /* Make sure the checksum is OK */
   uint16_t checksum_received = ip_header->ip_sum;
-  uint16_t checksum_computed = checksum(ip_header, sizeof(IpHeader_t));
+  uint16_t checksum_computed = checksum(ip_header, sizeof(IpHeader));
   if ( checksum_received != checksum_computed )
   	printf("*** Checksum doesn't match :(");
 }
