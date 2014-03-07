@@ -194,7 +194,7 @@ void handlePacket(struct Instance* sr,
   switch ( ether_type ) {
     case ethertype_ip :
       printf("*** Handling IP packet\n");
-      handlePacket(sr, packet, len, interface);
+      handleIpPacket(sr, packet, len, interface);
       break;
     case ethertype_arp :
       printf("*** Handling ARP packet\n");
@@ -207,19 +207,22 @@ void handlePacket(struct Instance* sr,
   }
 }/* end handlePacket */
 
-void handleIpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {
+void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned int len, char* interface) {
   /* First do the length check. Unfortunately, I don't understand this part so I'm gonna skip it */
   if ( 0 )
     printf("*** Error: bad IP header length %d\n", len);
     /* Should we also send an ICMP type 12 code 2 bad header length? */
   
-  /*Need to encapsulate the raw frame in packet into an IP header object*/
-  struct IpHeader* ip_header  = (struct IpHeader*)packet;
+  /*Need to encapsulate the frame into an IP header object*/
+  struct IpHeader* ip_header  = (struct IpHeader*)frame_unformatted;
   /* Make sure the checksum is OK */
   uint16_t checksum_received = ip_header->ip_sum;
   uint16_t checksum_computed = checksum(ip_header, sizeof(struct IpHeader));
   if ( checksum_received != checksum_computed )
   	printf("*** Checksum doesn't match :(");
+  	/* TODO I think this logic is wrong */
+  
+  
 }
 
 void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {}
