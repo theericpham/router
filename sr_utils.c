@@ -21,12 +21,12 @@ uint16_t checksum(const void *_data, int len) {
 
 
 uint16_t ethertype(uint8_t *buf) {
-  EthernetHeader *ehdr = (EthernetHeader *)buf;
+  struct EthernetHeader *ehdr = (struct EthernetHeader *)buf;
   return ntohs(ehdr->ether_type);
 }
 
 uint8_t ipProtocol(uint8_t *buf) {
-  IpHeader *iphdr = (IpHeader *)(buf);
+  struct IpHeader *iphdr = (struct IpHeader *)(buf);
   return iphdr->ip_p;
 }
 
@@ -68,7 +68,7 @@ void printIpAddress_int(uint32_t ip) {
 
 /* Prints out fields in Ethernet header. */
 void printEthernetHeader(uint8_t *buf) {
-  EthernetHeader *ehdr = (EthernetHeader *)buf;
+  struct EthernetHeader *ehdr = (struct EthernetHeader *)buf;
   fprintf(stderr, "ETHERNET header:\n");
   fprintf(stderr, "\tdestination: ");
   printEthernetAddress(ehdr->ether_dhost);
@@ -79,7 +79,7 @@ void printEthernetHeader(uint8_t *buf) {
 
 /* Prints out fields in IP header. */
 void printIpHeader(uint8_t *buf) {
-  IpHeader *iphdr = (IpHeader *)(buf);
+  struct IpHeader* iphdr = (struct IpHeader *)(buf);
   fprintf(stderr, "IP header:\n");
   fprintf(stderr, "\tversion: %d\n", iphdr->ip_v);
   fprintf(stderr, "\theader length: %d\n", iphdr->ip_hl);
@@ -110,7 +110,7 @@ void printIpHeader(uint8_t *buf) {
 
 /* Prints out ICMP header fields */
 void printIcmpHeader(uint8_t *buf) {
-  IcmpHeader *icmp_hdr = (IcmpHeader *)(buf);
+  struct IcmpHeader *icmp_hdr = (struct IcmpHeader *)(buf);
   fprintf(stderr, "ICMP header:\n");
   fprintf(stderr, "\ttype: %d\n", icmp_hdr->icmp_type);
   fprintf(stderr, "\tcode: %d\n", icmp_hdr->icmp_code);
@@ -121,7 +121,7 @@ void printIcmpHeader(uint8_t *buf) {
 
 /* Prints out fields in ARP header */
 void printArpHeader(uint8_t *buf) {
-  ArpHeader *arp_hdr = (ArpHeader *)(buf);
+  struct ArpHeader *arp_hdr = (struct ArpHeader *)(buf);
   fprintf(stderr, "ARP header\n");
   fprintf(stderr, "\thardware type: %d\n", ntohs(arp_hdr->ar_hrd));
   fprintf(stderr, "\tprotocol type: %d\n", ntohs(arp_hdr->ar_pro));
@@ -144,7 +144,7 @@ void printArpHeader(uint8_t *buf) {
 void printHeaders(uint8_t *buf, uint32_t length) {
 
   /* Ethernet */
-  int minlength = sizeof(EthernetHeader);
+  int minlength = sizeof(struct EthernetHeader);
   if (length < minlength) {
     fprintf(stderr, "Failed to print ETHERNET header, insufficient length\n");
     return;
@@ -154,29 +154,29 @@ void printHeaders(uint8_t *buf, uint32_t length) {
   printEthernetHeader(buf);
 
   if (ethtype == ethertype_ip) { /* IP */
-    minlength += sizeof(IpHeader);
+    minlength += sizeof(struct IpHeader);
     if (length < minlength) {
       fprintf(stderr, "Failed to print IP header, insufficient length\n");
       return;
     }
 
-    printIpHeader(buf + sizeof(EthernetHeader));
-    uint8_t ip_proto = ipProtocol(buf + sizeof(EthernetHeader));
+    printIpHeader(buf + sizeof(struct EthernetHeader));
+    uint8_t ip_proto = ipProtocol(buf + sizeof(struct EthernetHeader));
 
     if (ip_proto == ipProtocol_icmp) { /* ICMP */
-      minlength += sizeof(IcmpHeader);
+      minlength += sizeof(struct IcmpHeader);
       if (length < minlength)
         fprintf(stderr, "Failed to print ICMP header, insufficient length\n");
       else
-        printIcmpHeader(buf + sizeof(EthernetHeader) + sizeof(IpHeader));
+        printIcmpHeader(buf + sizeof(struct EthernetHeader) + sizeof(struct IpHeader));
     }
   }
   else if (ethtype == ethertype_arp) { /* ARP */
-    minlength += sizeof(ArpHeader);
+    minlength += sizeof(struct ArpHeader);
     if (length < minlength)
       fprintf(stderr, "Failed to print ARP header, insufficient length\n");
     else
-      printArpHeader(buf + sizeof(EthernetHeader));
+      printArpHeader(buf + sizeof(struct EthernetHeader));
   }
   else {
     fprintf(stderr, "Unrecognized Ethernet Type: %d\n", ethtype);

@@ -46,7 +46,7 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, u
  */
 int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name) {
   /* get the interface to forward from */
-  EthernetHeader* frame = (EthernetHeader*) packet;
+  struct EthernetHeader* frame = (struct EthernetHeader*) packet;
   struct Interface* interface  = getInterface(sr, name);
   
   /* set MAC addresses */
@@ -62,9 +62,9 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, u
  *  Send an ICMP message with type and code fields to dest from router interface 
  */
 int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface) {
-  int ether_hdr_len = sizeof(EthernetHeader);
-  int ip_hdr_len    = sizeof(IpHeader);
-  int icmp_hdr_len  = sizeof(IcmpHeader);
+  int ether_hdr_len = sizeof(struct EthernetHeader);
+  int ip_hdr_len    = sizeof(struct IpHeader);
+  int icmp_hdr_len  = sizeof(struct IcmpHeader);
   int len           = ether_hdr_len + ip_hdr_len + icmp_hdr_len;
   
   int ip_hdr_offset   = ether_hdr_len;
@@ -72,9 +72,9 @@ int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, cha
   
   /* construct headers */
   uint8_t* response_packet = (uint8_t*) malloc(len);
-  IcmpHeader* icmp_hdr  = (IcmpHeader*) (response_packet + icmp_hdr_offset);
-  IpHeader* ip_hdr      = (IpHeader*) (response_packet + ip_hdr_offset);
-  EthernetHeader* ether_hdr = (EthernetHeader*) (response_packet);
+  struct IcmpHeader* icmp_hdr  = (struct IcmpHeader*) (response_packet + icmp_hdr_offset);
+  struct IpHeader* ip_hdr      = (struct IpHeader*) (response_packet + ip_hdr_offset);
+  struct EthernetHeader* ether_hdr = (struct EthernetHeader*) (response_packet);
   
   /* fill in icmp header */
   icmp_hdr->icmp_type = type;
@@ -162,7 +162,7 @@ void sr_init(struct Instance* sr)
 } /* -- sr_init -- */
 
 /*---------------------------------------------------------------------
- * Method: sr_handlepacket(uint8_t* p,char* interface)
+ * Method: handlePacket(uint8_t* p,char* interface)
  * Scope:  Global
  *
  * This method is called each time the router receives a packet on the
@@ -177,7 +177,7 @@ void sr_init(struct Instance* sr)
  *
  *---------------------------------------------------------------------*/
 
-void sr_handlepacket(struct Instance* sr,
+void handlePacket(struct Instance* sr,
         uint8_t * packet/* lent */,
         unsigned int len,
         char* interface/* lent */)
@@ -194,32 +194,32 @@ void sr_handlepacket(struct Instance* sr,
   switch ( ether_type ) {
     case ethertype_ip :
       printf("*** Handling IP packet\n");
-      sr_handle_ip_packet(sr, packet, len, interface);
+      handlePacket(sr, packet, len, interface);
       break;
     case ethertype_arp :
       printf("*** Handling ARP packet\n");
-      sr_handle_arp_packet(sr, packet, len, interface);
+      handleArpPacket(sr, packet, len, interface);
       break;
     default:
       printf("*** Unrecognized protocol %x \n", ether_type);
       /* TODO: Error response, maybe ICMP? */
       break;
   }
-}/* end sr_handlepacket */
+}/* end handlePacket */
 
-void sr_handle_ip_packet(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {
+void handleIpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {
   /* First do the length check. Unfortunately, I don't understand this part so I'm gonna skip it */
   if ( 0 )
     printf("*** Error: bad IP header length %d\n", len);
     /* Should we also send an ICMP type 12 code 2 bad header length? */
   
   /*Need to encapsulate the raw frame in packet into an IP header object*/
-  IpHeader* ip_header  = (IpHeader*)packet;
+  struct IpHeader* ip_header  = (struct IpHeader*)packet;
   /* Make sure the checksum is OK */
   uint16_t checksum_received = ip_header->ip_sum;
-  uint16_t checksum_computed = checksum(ip_header, sizeof(IpHeader));
+  uint16_t checksum_computed = checksum(ip_header, sizeof(struct IpHeader));
   if ( checksum_received != checksum_computed )
   	printf("*** Checksum doesn't match :(");
 }
 
-void sr_handle_arp_packet(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {}
+void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {}

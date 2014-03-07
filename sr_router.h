@@ -69,10 +69,10 @@ int readFromServer(struct Instance* );
 
 /* -- sr_router.c -- */
 void sr_init(struct Instance* );
-void sr_handlepacket(struct Instance* , uint8_t * , unsigned int , char* );
+void handlePacket(struct Instance* , uint8_t * , unsigned int , char* );
 /*Caleb and Eric's added functions */
-void sr_handle_ip_packet(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface);
-void sr_handle_arp_packet(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface);
+void handleIpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface);
+void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface);
 
 /* -- sr_if.c -- */
 void addInterface(struct Instance* , const char* );

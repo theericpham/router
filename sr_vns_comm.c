@@ -439,7 +439,7 @@ int readFromServerExpect(struct Instance* sr /* borrowed */, int expected_cmd)
                     ntohl(sr_pkt->mLen) - sizeof(c_packet_header));
 
             /* -- pass to router, student's code should take over here -- */
-            sr_handlepacket(sr,
+            handlePacket(sr,
                     (buf+sizeof(c_packet_header)),
                     len - sizeof(c_packet_ethernet_header) +
                     sizeof(struct EthernetHeader),
