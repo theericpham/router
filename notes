@@ -21,12 +21,13 @@ sr_router.c
     compute checksum on IP header
       if bad, ICMP error?
     
-    get interface for packet
-    if interface belongs to router
+		(call sendIp)
       ...
     else
-      Look up next-hop IP address in routing table using destination IP address
-        if no next-hop IP, send ICMP type 3 code 0, destination network unreachable
+      Look up next-hop interface in routing table using destination IP address
+        if no next-hop interface, send ICMP type 3 code 0, destination network unreachable
+     get interface for packet
+    if interface belongs to router
       Look up MAC address for next-hop IP in ARP cache
       If next-hop MAC isn't cached,
         send ARP request for it

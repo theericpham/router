@@ -200,13 +200,14 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
     /* Should we also send an ICMP type 12 code 2 bad header length? */
   
   /*Need to encapsulate the frame into an IP header object*/
-  struct IpHeader* ip_header  = (struct IpHeader*)frame_unformatted;
+  struct IpHeader* ip_header  = (struct IpHeader*)(frame_unformatted + ETHERNET_HEADER_LENGTH);
   /* Make sure the checksum is OK */
   uint16_t checksum_received = ip_header->ip_sum;
-  uint16_t checksum_computed = checksum(ip_header, sizeof(struct IpHeader));
+  ip_header->ip_sum = 0;
+  uint16_t checksum_computed = checksum(ip_header, IP_HEADER_LENGTH);
+  printIpHeader((uint8_t*)ip_header);
   if ( checksum_received != checksum_computed )
   	printf("*** Checksum doesn't match :(");
-  	/* TODO I think this logic is wrong */
   
   
 }
