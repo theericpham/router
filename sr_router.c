@@ -44,87 +44,79 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, u
 /* 
  *  Set ethernet frame for a packet by filling in MAC addresses and send the packet 
  */
-int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name) {
+int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int length, unsigned char* mac, char* interface_name) {
   /* get the interface to forward from */
   struct EthernetHeader* frame = (struct EthernetHeader*) packet;
-  struct Interface* interface  = getInterface(sr, name);
+  struct Interface* interface  = getInterface(sr, interface_name);
   
   /* set MAC addresses */
   memcpy(frame->ether_dhost, mac, ETHERNET_ADDRESS_LENGTH);              /* dest specified by args */
   memcpy(frame->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);  /* src is interface MAC address */
     
-  sendPacket(sr, packet, len, name);
+  sendPacket(sr, packet, length, interface_name);
   
   return 0;
+}
+
+int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int length, char* interface) {
+	/* First get a pointer to the IP header of this data */
+	struct IpHeader* ip_header = (struct IpHeader*)(data + ETHERNET_HEADER_LENGTH);
+	/* Generic IP header information */
+	ip_header->ip_v   = IP_VERSION_4;
+	ip_header->ip_hl  = IP_HEADER_LEN;
+	ip_header->ip_tos = 0;
+	ip_header->ip_len = IP_HEADER_LENGTH + ICMP_HEADER_LENGTH;
+	ip_header->ip_id  = 0;
+	ip_header->ip_off = IP_DF;
+	ip_header->ip_ttl = IP_DEFAULT_TTL;
+	ip_header->ip_p   = ipProtocol_icmp;
+	/* Specific things for this packet */
+	struct Interface* source_interface = getInterface(sr, interface);
+	ip_header->ip_dst = destination_ip;
+	ip_header->ip_src = source_interface->ip;
+	/* compute ip header checksum */
+	ip_header->ip_sum = checksum(data + ETHERNET_HEADER_LENGTH, IP_HEADER_LENGTH);
+	
+	/* Next look up the route to the destination IP */
+	struct RoutingTable* route = findLpmRoute(sr, destination_ip);
+	if (!route)
+		return -1; /* TODO print error or send ICMP? */
+	/* The only thing we'll be using from this route is which one of our interfaces it uses. */
+	char* sending_interface = route->interface;
+	
+	/* Now see if the address for this destination is in our ARP cache */
+	struct ArpEntry* arp_entry = arpCacheLookup(&(sr->cache), destination_ip);
+	if (arp_entry) {
+		frameAndSendPacket(sr, data, length, arp_entry->mac, sending_interface);
+		free(arp_entry);
+	}
+	else {
+		/* queue and handle arp request if no entry exists */
+		struct ArpRequest* arp_request = arpCacheQueueRequest(&(sr->cache), destination_ip, data, length, sending_interface);
+		arp_request->interface = sending_interface;
+		handleArpRequest(sr, arp_request);
+	}
+	return 0; /* We're done! */
 }
 
 /* 
  *  Send an ICMP message with type and code fields to dest from router interface 
  */
-int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface) {
-  int len           = ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH + ICMP_HEADER_LENGTH;
-    
-  /* construct headers */
-  uint8_t* response_packet = (uint8_t*) malloc(len);
-  struct IcmpHeader* icmp_hdr  = (struct IcmpHeader*) (response_packet + ICMP_OFFSET);
-  struct IpHeader* ip_hdr      = (struct IpHeader*) (response_packet + ETHERNET_HEADER_LENGTH);
-  struct EthernetHeader* ether_hdr = (struct EthernetHeader*) (response_packet);
+int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t code, char* interface) {
+	/* construct headers */
+	int length = ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH + ICMP_HEADER_LENGTH;
+	uint8_t* response_packet = (uint8_t*) malloc(length);
+	struct IcmpHeader* icmp_header  = (struct IcmpHeader*) (response_packet + ICMP_OFFSET);
+
+	/* fill in icmp header */
+	icmp_header->icmp_type = type;
+	icmp_header->icmp_code = code;
+	icmp_header->icmp_sum  = checksum(response_packet + ICMP_OFFSET, ICMP_HEADER_LENGTH);
+
+	/* Pass the packet to sendIp, which will take care of the IP header formatting and look up the destination in the ARP cache
+	Return whatever status this function returns. */
   
-  /* fill in icmp header */
-  icmp_hdr->icmp_type = type;
-  icmp_hdr->icmp_code = code;
-  icmp_hdr->icmp_sum  = 0;
-  icmp_hdr->icmp_sum  = checksum(response_packet + ICMP_OFFSET, ICMP_HEADER_LENGTH);
-  
-  /* fill in ip header */
-  ip_hdr->ip_v   = IP_VERSION_4;
-  ip_hdr->ip_hl  = IP_HEADER_LEN;
-  ip_hdr->ip_tos = 0;
-  ip_hdr->ip_len = IP_HEADER_LENGTH + ICMP_HEADER_LENGTH;
-  ip_hdr->ip_id  = 0;
-  ip_hdr->ip_off = IP_DF;
-  ip_hdr->ip_ttl = IP_DEFAULT_TTL;
-  ip_hdr->ip_p   = ipProtocol_icmp;
-  
-  /* get the outgoing interface and set ip src and dst */
-  struct Interface* src_if = getInterface(sr, interface);
-  ip_hdr->ip_dst = dest;
-  ip_hdr->ip_src = src_if->ip;
-  
-  /* compute ip header checksum */
-  ip_hdr->ip_sum = 0;
-  ip_hdr->ip_sum = checksum(response_packet + ETHERNET_HEADER_LENGTH, IP_HEADER_LENGTH);
-  
-  /* set ethernet header ethertype */
-  ether_hdr->ether_type = ethertype_ip;
-  
-  /* find route to dest */
-  struct RoutingTable* route = findLpmRoute(sr, dest);
-  if (route == NULL) {
-    /* TODO print error or send ICMP? */
-    return -1;
-  }
-  
-  /* find ARP entry for MAC */
-  struct ArpEntry* arp_entry = arpCacheLookup(&(sr->cache), dest);
-  if (arp_entry) {
-    /* TODO fill in ethernet header and set if entry exists */
-    /* FIXED the following function call fills in ethernet header and sends packet 
-     *       frameAndSendPacket defined above on line 47
-     */
-    frameAndSendPacket(sr, response_packet, len, arp_entry->mac, route->interface);
-    free(arp_entry);
-  }
-  else {
-    /* queue and handle arp request if no entry exists */
-    struct ArpRequest* arp_req = arpCacheQueueRequest(&(sr->cache), dest, response_packet, len, route->interface);
-    arp_req->interface = route->interface;
-    /* TODO  what is router ? */
-    /* I think this should be route->interface (not router).  Your thoughts? */
-    handleArpRequest(sr, arp_req);
-  }
-  
-  return 0;
+	return sendIp(sr, destination_ip, response_packet, length, interface);
 }
 
 /*---------------------------------------------------------------------

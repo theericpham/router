@@ -21,67 +21,60 @@
 
 #define IP_ADDRESS_LENGTH                 4
 
+unsigned char BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
 int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name);
 int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface);
 
-int handleArpRequest(struct Instance* sr, struct ArpRequest* req) {
+int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
   printf("*** Processing ARP Request ***\n");
   
   time_t now = time(NULL);
   struct IpHeader* ip_hdr;
-  int ethernet_hdr_offset = sizeof(struct EthernetHeader);
   
-  if (difftime(now, req->sent) > ARP_REQUEST_SEND_INTERVAL) {
-    if (req->times_sent >= ARP_REQUEST_SEND_LIMIT) {
+  if (difftime(now, request->sent) > ARP_REQUEST_SEND_INTERVAL) {
+    if (request->times_sent >= ARP_REQUEST_SEND_LIMIT) {
       struct RawFrame* packet;
-      for (packet = req->packets; packet != NULL; packet = packet->next) {
-        /* TODO: Fix this. What is packet->iface, and why does line 37 say incompat ptr type? */
-        /* Resolved incompat ptr type by removing 'struct' from ptr declaration */
-        ip_hdr = (struct IpHeader*) (packet + ethernet_hdr_offset);
+      for (packet = request->packets; packet != NULL; packet = packet->next) {
+        ip_hdr = (struct IpHeader*) (packet + ETHERNET_HEADER_LENGTH);
         if (sendIcmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
           ;/* print error message */
       }
-      destroyArpRequest(&(sr->cache), req);
+      destroyArpRequest(&(sr->cache), request);
     }
   }
   else {
-    int len = ETHERNET_HEADER_LENGTH + ARP_HEADER_LENGTH;
+    int length = ETHERNET_HEADER_LENGTH + ARP_HEADER_LENGTH;
     
     /* create headers */
-    uint8_t* response = (uint8_t*) malloc(len);
-    struct EthernetHeader* ether_hdr = (struct EthernetHeader*) req; /*Fixed: was response*/
-    struct ArpHeader* arp_hdr        = (struct ArpHeader*) (ether_hdr + ETHERNET_HEADER_LENGTH);
+    uint8_t* response = (uint8_t*) malloc(length);
+    struct ArpHeader* arp_header        = (struct ArpHeader*) (response + ETHERNET_HEADER_LENGTH);
     
-    /* get interface */
-    struct Interface* interface = getInterface(sr, req->interface);
-    
-    ether_hdr->ether_type = ethertype_arp;
+    /* Get the details of the interface the ARP request wants us to send from */
+    struct Interface* interface = getInterface(sr, request->interface);
     
     /* fill in arp header */
-    arp_hdr->ar_hrd = arp_hardware_ethernet;
-    arp_hdr->ar_pro = ethertype_ip;
-    arp_hdr->ar_hln = ETHERNET_ADDRESS_LENGTH;
-    arp_hdr->ar_pln = IP_ADDRESS_LENGTH;
-    arp_hdr->ar_op  = arp_op_request;
-    arp_hdr->ar_sip = interface->ip;
-    arp_hdr->ar_tip = req->ip;
+    arp_header->ar_hrd = arp_hardware_ethernet;
+    arp_header->ar_pro = ethertype_ip;
+    arp_header->ar_hln = ETHERNET_ADDRESS_LENGTH;
+    arp_header->ar_pln = IP_ADDRESS_LENGTH;
+    arp_header->ar_op  = arp_op_request;
+    arp_header->ar_sip = interface->ip;
+    arp_header->ar_tip = request->ip;
+    memcpy(arp_header->ar_sha, interface->addr, ETHERNET_ADDRESS_LENGTH);
     
-    /* set source and destination info */
-    memcpy(arp_hdr->ar_sha, interface->addr, ETHERNET_ADDRESS_LENGTH);
-    memcpy(ether_hdr->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);
+    /* move to frameAndSend */
+    /*memcpy(ether_hdr->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);
+	ether_hdr->ether_dhost[i] = 0xFF; */
+
+    memcpy(arp_header->ar_tha, BROADCAST_MAC, ETHERNET_ADDRESS_LENGTH);
     
-    int i;
-    for (i = 0; i < ETHERNET_ADDRESS_LENGTH; i++) {
-      arp_hdr->ar_tha[i] = 0xFF;
-      ether_hdr->ether_dhost[i] = 0xFF;
-    }
-    
-    /* send packet */
-    sendPacket(sr, response, len, interface->name);
+    /* previously  sendPacket(sr, response, len, interface->name);*/
+	frameAndSendPacket(sr, response, length, BROADCAST_MAC, request->interface);
     
     /* update request info */
-    req->sent = time(NULL);
-    req->times_sent = req->times_sent + 1;
+    request->sent = time(NULL);
+    request->times_sent++;
   }
   
   return 0;
