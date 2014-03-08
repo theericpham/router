@@ -74,7 +74,15 @@
   #define __BYTE_ORDER __BIG_ENDIAN
   #endif
 #endif
+
 #define ICMP_DATA_SIZE 28
+/* Caleb's definitions */
+#define ETHERNET_ADDRESS_LENGTH 6
+#define ETHERNET_HEADER_LENGTH 14
+#define IP_HEADER_LENGTH 20
+#define ARP_HEADER_LENGTH 28
+#define ICMP_HEADER_LENGTH 4
+#define ICMP_OFFSET (ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH)
 
 
 /* Structure of a ICMP header
@@ -134,11 +142,8 @@ struct IpHeader
  */
 struct EthernetHeader
 {
-#ifndef ETHER_ADDR_LEN
-#define ETHER_ADDR_LEN 6
-#endif
-    uint8_t  ether_dhost[ETHER_ADDR_LEN];    /* destination ethernet address */
-    uint8_t  ether_shost[ETHER_ADDR_LEN];    /* source ethernet address */
+    uint8_t  ether_dhost[ETHERNET_ADDRESS_LENGTH];    /* destination ethernet address */
+    uint8_t  ether_shost[ETHERNET_ADDRESS_LENGTH];    /* source ethernet address */
     uint16_t ether_type;                     /* packet type ID */
 } __attribute__ ((packed)) ;
 
@@ -170,9 +175,9 @@ struct ArpHeader
     unsigned char   ar_hln;             /* length of hardware address   */
     unsigned char   ar_pln;             /* length of protocol address   */
     unsigned short  ar_op;              /* ARP opcode (command)         */
-    unsigned char   ar_sha[ETHER_ADDR_LEN];   /* sender hardware address      */
+    unsigned char   ar_sha[ETHERNET_ADDRESS_LENGTH];   /* sender hardware address      */
     uint32_t        ar_sip;             /* sender IP address            */
-    unsigned char   ar_tha[ETHER_ADDR_LEN];   /* target hardware address      */
+    unsigned char   ar_tha[ETHERNET_ADDRESS_LENGTH];   /* target hardware address      */
     uint32_t        ar_tip;             /* target IP address            */
 } __attribute__ ((packed)) ;
 

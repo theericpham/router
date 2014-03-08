@@ -35,7 +35,7 @@ uint8_t ipProtocol(uint8_t *buf) {
 void printEthernetAddress(uint8_t *addr) {
   int pos = 0;
   uint8_t cur;
-  for (; pos < ETHER_ADDR_LEN; pos++) {
+  for (; pos < ETHERNET_ADDRESS_LENGTH; pos++) {
     cur = addr[pos];
     if (pos > 0)
       fprintf(stderr, ":");

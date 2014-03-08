@@ -50,8 +50,8 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, u
   struct Interface* interface  = getInterface(sr, name);
   
   /* set MAC addresses */
-  memcpy(frame->ether_dhost, mac, ETHER_ADDR_LEN);              /* dest specified by args */
-  memcpy(frame->ether_shost, interface->addr, ETHER_ADDR_LEN);  /* src is interface MAC address */
+  memcpy(frame->ether_dhost, mac, ETHERNET_ADDRESS_LENGTH);              /* dest specified by args */
+  memcpy(frame->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);  /* src is interface MAC address */
     
   sendPacket(sr, packet, len, name);
   
@@ -62,31 +62,25 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, u
  *  Send an ICMP message with type and code fields to dest from router interface 
  */
 int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface) {
-  int ether_hdr_len = sizeof(struct EthernetHeader);
-  int ip_hdr_len    = sizeof(struct IpHeader);
-  int icmp_hdr_len  = sizeof(struct IcmpHeader);
-  int len           = ether_hdr_len + ip_hdr_len + icmp_hdr_len;
-  
-  int ip_hdr_offset   = ether_hdr_len;
-  int icmp_hdr_offset = ip_hdr_offset + ip_hdr_len;
-  
+  int len           = ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH + ICMP_HEADER_LENGTH;
+    
   /* construct headers */
   uint8_t* response_packet = (uint8_t*) malloc(len);
-  struct IcmpHeader* icmp_hdr  = (struct IcmpHeader*) (response_packet + icmp_hdr_offset);
-  struct IpHeader* ip_hdr      = (struct IpHeader*) (response_packet + ip_hdr_offset);
+  struct IcmpHeader* icmp_hdr  = (struct IcmpHeader*) (response_packet + ICMP_OFFSET);
+  struct IpHeader* ip_hdr      = (struct IpHeader*) (response_packet + ETHERNET_HEADER_LENGTH);
   struct EthernetHeader* ether_hdr = (struct EthernetHeader*) (response_packet);
   
   /* fill in icmp header */
   icmp_hdr->icmp_type = type;
   icmp_hdr->icmp_code = code;
   icmp_hdr->icmp_sum  = 0;
-  icmp_hdr->icmp_sum  = checksum(response_packet + icmp_hdr_offset, icmp_hdr_len);
+  icmp_hdr->icmp_sum  = checksum(response_packet + ICMP_OFFSET, ICMP_HEADER_LENGTH);
   
   /* fill in ip header */
   ip_hdr->ip_v   = IP_VERSION_4;
   ip_hdr->ip_hl  = IP_HEADER_LEN;
   ip_hdr->ip_tos = 0;
-  ip_hdr->ip_len = len - ip_hdr_offset;
+  ip_hdr->ip_len = IP_HEADER_LENGTH + ICMP_HEADER_LENGTH;
   ip_hdr->ip_id  = 0;
   ip_hdr->ip_off = IP_DF;
   ip_hdr->ip_ttl = IP_DEFAULT_TTL;
@@ -99,7 +93,7 @@ int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, cha
   
   /* compute ip header checksum */
   ip_hdr->ip_sum = 0;
-  ip_hdr->ip_sum = checksum(response_packet + ip_hdr_offset, ip_hdr_len);
+  ip_hdr->ip_sum = checksum(response_packet + ETHERNET_HEADER_LENGTH, IP_HEADER_LENGTH);
   
   /* set ethernet header ethertype */
   ether_hdr->ether_type = ethertype_ip;

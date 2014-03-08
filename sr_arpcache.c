@@ -45,15 +45,12 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* req) {
     }
   }
   else {
-    int ether_hdr_len  = sizeof(struct EthernetHeader);
-    int arp_hdr_len    = sizeof(struct ArpHeader);
-    int arp_hdr_offset = ether_hdr_len;
-    int len            = ether_hdr_len + arp_hdr_len;
+    int len = ETHERNET_HEADER_LENGTH + ARP_HEADER_LENGTH;
     
     /* create headers */
     uint8_t* response = (uint8_t*) malloc(len);
     struct EthernetHeader* ether_hdr = (struct EthernetHeader*) req; /*Fixed: was response*/
-    struct ArpHeader* arp_hdr        = (struct ArpHeader*) (ether_hdr + arp_hdr_offset);
+    struct ArpHeader* arp_hdr        = (struct ArpHeader*) (ether_hdr + ETHERNET_HEADER_LENGTH);
     
     /* get interface */
     struct Interface* interface = getInterface(sr, req->interface);
@@ -63,18 +60,18 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* req) {
     /* fill in arp header */
     arp_hdr->ar_hrd = arp_hardware_ethernet;
     arp_hdr->ar_pro = ethertype_ip;
-    arp_hdr->ar_hln = ETHER_ADDR_LEN;
+    arp_hdr->ar_hln = ETHERNET_ADDRESS_LENGTH;
     arp_hdr->ar_pln = IP_ADDRESS_LENGTH;
     arp_hdr->ar_op  = arp_op_request;
     arp_hdr->ar_sip = interface->ip;
     arp_hdr->ar_tip = req->ip;
     
     /* set source and destination info */
-    memcpy(arp_hdr->ar_sha, interface->addr, ETHER_ADDR_LEN);
-    memcpy(ether_hdr->ether_shost, interface->addr, ETHER_ADDR_LEN);
+    memcpy(arp_hdr->ar_sha, interface->addr, ETHERNET_ADDRESS_LENGTH);
+    memcpy(ether_hdr->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);
     
     int i;
-    for (i = 0; i < ETHER_ADDR_LEN; i++) {
+    for (i = 0; i < ETHERNET_ADDRESS_LENGTH; i++) {
       arp_hdr->ar_tha[i] = 0xFF;
       ether_hdr->ether_dhost[i] = 0xFF;
     }

@@ -38,7 +38,7 @@ struct Instance;
 struct Interface
 {
   char name[sr_IFACE_NAMELEN];
-  unsigned char addr[ETHER_ADDR_LEN];
+  unsigned char addr[ETHERNET_ADDRESS_LENGTH];
   uint32_t ip;
   uint32_t speed;
   struct Interface* next;
