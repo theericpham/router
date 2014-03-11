@@ -23,7 +23,7 @@
 
 unsigned char BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name);
+int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, enum Ethertype packet_ethertype, char* name);
 int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface);
 
 int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
@@ -70,7 +70,7 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     memcpy(arp_header->ar_tha, BROADCAST_MAC, ETHERNET_ADDRESS_LENGTH);
     
     /* previously  sendPacket(sr, response, len, interface->name);*/
-	frameAndSendPacket(sr, response, length, BROADCAST_MAC, request->interface);
+	frameAndSendPacket(sr, response, length, BROADCAST_MAC, ethertype_arp, request->interface);
     
     /* update request info */
     request->sent = time(NULL);
