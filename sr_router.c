@@ -212,4 +212,63 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
   
 }
 
-void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {}
+void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {
+  /* error if packet size is too small */
+  if (len < ETHERNET_HEADER_LENGTH + ARP_HEADER_LENGTH)
+    return -1;
+  
+  /* format arp header and get the request's target interface */
+  struct ArpHeader* arp_header = (struct ArpHeader*) (packet + ETHERNET_HEADER_LENGTH);
+  struct Interface* target_interface = getInterface(sr, arp_header->arp_tip);
+  
+  if (target_interface) {
+    /* debug statement */
+    sr_print_if(target_interface);
+    
+    /* verify that the arp request is for our router's interface */
+    if (strcmp(interface, target_interface->name) == 0) {
+      unsigned short arp_code = arp_header->ar_op;
+      
+      if (arp_code == arp_op_reply) {
+        /* cache the response */
+        struct ArpRequest* arp_request = arpCacheInsert(&(sr->cache), arp_header->ar_sha, arp_header->ar_sip);
+        
+        /* forward pending packets */
+        struct RawFrame* pending_packet = arp_request ? arp_request->packets : NULL;
+        for (; pending_packet != NULL; pending_packet = pending_packet->next)
+          frameAndSendPacket(sr, pending_packet->buf, pending_packet->len, arp_header->ar_sha, pending_packet->iface);
+      }
+      else if (arp_code == arp_op_request) {
+        /* flip destination and target addresses */
+        /* sender becomes target */
+        memcpy(arp_header->ar_tha, arp_header->ar_sha, ETHERNET_ADDRESS_LENGTH);
+        arp_header->ar_tip = arp_header->ar_sip;
+        
+        /* router interface becomes source */
+        memcpy(arp_header->ar_sha, interface->addr, ETHERNET_ADDRESS_LENGTH);
+        arp_header->ar_tip = interface->ip;
+        
+        /* flip arp request to reply */
+        arp_header->ar_op = arp_op_reply;
+        
+        /* update mac addresses */
+        EthernetHeader* ethernet_header = (EthernetHeader*) packet;
+        memcpy(ethernet_header->ether_dhost, arp_header->ar_tha, ETHERNET_ADDRESS_LENGTH);
+        memcpy(ethernet_header->ether_shost, arp_header->ar_sha, ETHERNET_ADDRESS_LENGTH);
+        
+        /* send packet */
+        sendPacket(sr, packet, len, interface);        
+      }
+      else {
+        /* ARP was not a request or reply */
+        return -1;
+      }
+    }
+    else {
+      /* packet interface and router interface names don't match */
+      /* what should we do? */
+    }
+  }
+  
+  return 0;
+}
