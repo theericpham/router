@@ -238,7 +238,7 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
         /* forward pending packets */
         struct RawFrame* pending_packet = arp_request ? arp_request->packets : NULL;
         for (; pending_packet != NULL; pending_packet = pending_packet->next)
-          frameAndSendPacket(sr, pending_packet->buf, pending_packet->len, arp_header->ar_sha, pending_packet->iface);
+          frameAndSendPacket(sr, pending_packet->buf, pending_packet->len, arp_header->ar_sha, ethertype_arp, pending_packet->iface);
       }
       else if (arp_code == arp_op_request) {
         /* flip destination and target addresses */
