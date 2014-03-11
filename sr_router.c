@@ -39,12 +39,12 @@
  *---------------------------------------------------------------------*/
 
 int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface); /*Fixed*/
-int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* iface);
+int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, enum Ethertype packet_ethertype, char* iface);
 
 /* 
  *  Set ethernet frame for a packet by filling in MAC addresses and send the packet 
  */
-int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int length, unsigned char* mac, char* interface_name) {
+int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int length, unsigned char* mac, enum Ethertype packet_ethertype, char* interface_name) {
   /* get the interface to forward from */
   struct EthernetHeader* frame = (struct EthernetHeader*) packet;
   struct Interface* interface  = getInterface(sr, interface_name);
@@ -52,6 +52,8 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int length
   /* set MAC addresses */
   memcpy(frame->ether_dhost, mac, ETHERNET_ADDRESS_LENGTH);              /* dest specified by args */
   memcpy(frame->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);  /* src is interface MAC address */
+  
+  frame->ether_type = packet_ethertype;
     
   sendPacket(sr, packet, length, interface_name);
   
@@ -65,11 +67,11 @@ int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int leng
 	ip_header->ip_v   = IP_VERSION_4;
 	ip_header->ip_hl  = IP_HEADER_LEN;
 	ip_header->ip_tos = 0;
-	ip_header->ip_len = IP_HEADER_LENGTH + ICMP_HEADER_LENGTH;
+	ip_header->ip_len = length - ETHERNET_HEADER_LENGTH; /* A little janky but I think it's better than the alternative */
 	ip_header->ip_id  = 0;
 	ip_header->ip_off = IP_DF;
 	ip_header->ip_ttl = IP_DEFAULT_TTL;
-	ip_header->ip_p   = ipProtocol_icmp;
+	ip_header->ip_p   = ipProtocol_icmp; /* TODO: Change this */
 	/* Specific things for this packet */
 	struct Interface* source_interface = getInterface(sr, interface);
 	ip_header->ip_dst = destination_ip;
@@ -87,7 +89,7 @@ int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int leng
 	/* Now see if the address for this destination is in our ARP cache */
 	struct ArpEntry* arp_entry = arpCacheLookup(&(sr->cache), destination_ip);
 	if (arp_entry) {
-		frameAndSendPacket(sr, data, length, arp_entry->mac, sending_interface);
+		frameAndSendPacket(sr, data, length, arp_entry->mac, ethertype_ip, sending_interface);
 		free(arp_entry);
 	}
 	else {
@@ -195,7 +197,7 @@ void handlePacket(struct Instance* sr,
 
 void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned int len, char* interface) {
   /* First do the length check. Unfortunately, I don't understand this part so I'm gonna skip it */
-  if ( 0 )
+  if ( len < IP_HEADER_LENGTH )
     printf("*** Error: bad IP header length %d\n", len);
     /* Should we also send an ICMP type 12 code 2 bad header length? */
   
@@ -208,8 +210,8 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
   printIpHeader((uint8_t*)ip_header);
   if ( checksum_received != checksum_computed )
   	printf("*** Checksum doesn't match :(");
-  
-  
+  /* I think it's time to send the packet on its next hop */
+  sendIp(sr, ip_header->ip_dst, frame_unformatted, len, interface);
 }
 
 void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {}
