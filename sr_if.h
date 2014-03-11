@@ -45,6 +45,7 @@ struct Interface
 };
 
 struct Interface* getInterface(struct Instance* sr, const char* name);
+struct Interface* getInterfaceByIp(struct Instance* sr, uint32_t ip);
 void addInterface(struct Instance*, const char*);
 void setEthernetAddress(struct Instance*, const unsigned char*);
 void setEthernetIp(struct Instance*, uint32_t ip_nbo);

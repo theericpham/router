@@ -25,6 +25,21 @@
 #include "sr_if.h"
 #include "sr_router.h"
 
+struct Interface* getInterfaceByIp(struct Instance* sr, uint32_t ip) {
+  struct Interface* if_walker = 0;
+  
+  assert(sr);
+  assert(ip);
+  
+  if_walker = sr->if_list;
+  for (; if_walker != NULL; if_walker = if_walker->next) {
+    if (if_walker->ip == ip) {
+      return if_walker;
+    }
+  }
+  return NULL;
+}
+
 /*--------------------------------------------------------------------- 
  * Method: getInterface
  * Scope: Global

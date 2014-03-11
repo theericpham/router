@@ -214,16 +214,16 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
 
 void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {
   /* error if packet size is too small */
-  if (len < ETHERNET_HEADER_LENGTH + ARP_HEADER_LENGTH)
-    return -1;
+  if (len < ETHERNET_HEADER_LENGTH + ARP_HEADER_LENGTH);
+    /* return -1; */
   
   /* format arp header and get the request's target interface */
   struct ArpHeader* arp_header = (struct ArpHeader*) (packet + ETHERNET_HEADER_LENGTH);
-  struct Interface* target_interface = getInterface(sr, arp_header->arp_tip);
+  struct Interface* target_interface = getInterfaceByIp(sr, arp_header->ar_tip);
   
   if (target_interface) {
     /* debug statement */
-    sr_print_if(target_interface);
+    printInterface(target_interface);
     
     /* verify that the arp request is for our router's interface */
     if (strcmp(interface, target_interface->name) == 0) {
@@ -245,14 +245,14 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
         arp_header->ar_tip = arp_header->ar_sip;
         
         /* router interface becomes source */
-        memcpy(arp_header->ar_sha, interface->addr, ETHERNET_ADDRESS_LENGTH);
-        arp_header->ar_tip = interface->ip;
+        memcpy(arp_header->ar_sha, target_interface->addr, ETHERNET_ADDRESS_LENGTH);
+        arp_header->ar_tip = target_interface->ip;
         
         /* flip arp request to reply */
         arp_header->ar_op = arp_op_reply;
         
         /* update mac addresses */
-        EthernetHeader* ethernet_header = (EthernetHeader*) packet;
+        struct EthernetHeader* ethernet_header = (struct EthernetHeader*) packet;
         memcpy(ethernet_header->ether_dhost, arp_header->ar_tha, ETHERNET_ADDRESS_LENGTH);
         memcpy(ethernet_header->ether_shost, arp_header->ar_sha, ETHERNET_ADDRESS_LENGTH);
         
@@ -261,7 +261,7 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
       }
       else {
         /* ARP was not a request or reply */
-        return -1;
+        /* return -1; */
       }
     }
     else {
@@ -270,5 +270,5 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
     }
   }
   
-  return 0;
+  /* return 0; */
 }

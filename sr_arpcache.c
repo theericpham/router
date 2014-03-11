@@ -27,7 +27,7 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, u
 int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface);
 
 int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
-  printf("*** Processing ARP Request ***\n");
+  fprintf(stderr, "*** Processing ARP Request ***\n");
   
   time_t now = time(NULL);
   struct IpHeader* ip_hdr;
@@ -38,7 +38,7 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
       for (packet = request->packets; packet != NULL; packet = packet->next) {
         ip_hdr = (struct IpHeader*) (packet + ETHERNET_HEADER_LENGTH);
         if (sendIcmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
-          ;/* print error message */
+          fprintf(stderr, "*** Unable to send ICMP\n");/* print error message */
       }
       destroyArpRequest(&(sr->cache), request);
     }
