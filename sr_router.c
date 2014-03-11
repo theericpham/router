@@ -216,8 +216,10 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
 
 void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {
   /* error if packet size is too small */
-  if (len < ETHERNET_HEADER_LENGTH + ARP_HEADER_LENGTH);
-    /* return -1; */
+  if (len < ETHERNET_HEADER_LENGTH + ARP_HEADER_LENGTH){
+    fprintf(stderr, "*** ARP Packet does not meet minimum length\n");
+    return;
+  }
   
   /* format arp header and get the request's target interface */
   struct ArpHeader* arp_header = (struct ArpHeader*) (packet + ETHERNET_HEADER_LENGTH);
@@ -225,13 +227,17 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
   
   if (target_interface) {
     /* debug statement */
+    fprintf(stderr, "*** Formated ARP header and found target interface:\n");
+    printArpHeader((uint8_t*) arp_header);
     printInterface(target_interface);
     
     /* verify that the arp request is for our router's interface */
     if (strcmp(interface, target_interface->name) == 0) {
+      fprintf(stderr, "*** Target interface %s belongs to our router\n", interface);
       unsigned short arp_code = arp_header->ar_op;
       
       if (arp_code == arp_op_reply) {
+        fprintf(stderr, "*** ARP Packet is an ARP Reply\n");
         /* cache the response */
         struct ArpRequest* arp_request = arpCacheInsert(&(sr->cache), arp_header->ar_sha, arp_header->ar_sip);
         
@@ -241,6 +247,7 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
           frameAndSendPacket(sr, pending_packet->buf, pending_packet->len, arp_header->ar_sha, ethertype_arp, pending_packet->iface);
       }
       else if (arp_code == arp_op_request) {
+        fprintf(stderr, "*** ARP Packet is an ARP Request");
         /* flip destination and target addresses */
         /* sender becomes target */
         memcpy(arp_header->ar_tha, arp_header->ar_sha, ETHERNET_ADDRESS_LENGTH);
@@ -262,15 +269,19 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
         sendPacket(sr, packet, len, interface);        
       }
       else {
+        fprintf(stderr, "*** ARP Packet was neither an ARP Request nor ARP Reply\n");
         /* ARP was not a request or reply */
-        /* return -1; */
+        /* return; */
       }
     }
     else {
+      fprintf(stderr, "*** Target interface matches our IP but not name\n");
       /* packet interface and router interface names don't match */
       /* what should we do? */
     }
   }
-  
-  /* return 0; */
+  else {
+    fprintf(stderr, "*** Target interface does not belong to our router\n");
+  }
+  /* return; */
 }
