@@ -203,7 +203,7 @@ struct RoutingTable* findLpmRoute(struct Instance* sr, uint32_t dest) {
     fprintf(stderr, "*** Found Longest Prefix Match for Address %i:\n", dest);
     printRoutingEntry(result);    
   } else {
-    fprintf(stderr, "*** No Routing Entry Found for Address %i\n", dest)
+    fprintf(stderr, "*** No Routing Entry Found for Address %i\n", dest);
   }
   return result;
 }
