@@ -182,7 +182,7 @@ void handlePacket(struct Instance* sr,
   printf("*** -> Received packet of length %d \n",len);
 
   /*First need to figure out what protocol is running above Ethernet here.*/
-  short ether_type = ethertype(packet);
+  uint16_t ether_type = ethertype(packet);
   switch ( ether_type ) {
     case ethertype_ip :
       printf("*** Handling IP packet\n");
@@ -251,7 +251,7 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
           frameAndSendPacket(sr, pending_packet->buf, pending_packet->len, arp_header->ar_sha, ethertype_arp, pending_packet->iface);
       }
       else if (arp_code == arp_op_request) {
-        fprintf(stderr, "*** ARP Packet is an ARP Request");
+        fprintf(stderr, "*** ARP Packet is an ARP Request\n");
         /* flip destination and target addresses */
         /* sender becomes target */
         memcpy(arp_header->ar_tha, arp_header->ar_sha, ETHERNET_ADDRESS_LENGTH);
