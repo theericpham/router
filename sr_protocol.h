@@ -135,6 +135,7 @@ struct IpHeader
     uint16_t ip_sum;			/* checksum */
     uint32_t ip_src, ip_dst;	/* source and dest address */
   } __attribute__ ((packed)) ;
+#define IP_OFFSET (ETHERNET_HEADER_LENGTH)
 
 /* 
  *  Ethernet packet header prototype.  Too many O/S's define this differently.

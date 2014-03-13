@@ -238,7 +238,7 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
     /* verify that the arp request is for our router's interface */
     if (strcmp(interface, target_interface->name) == 0) {
       fprintf(stderr, "*** Target interface %s belongs to our router\n", interface);
-      unsigned short arp_code = arp_header->ar_op;
+      unsigned short arp_code = ntohs(arp_header->ar_op);
       
       if (arp_code == arp_op_reply) {
         fprintf(stderr, "*** ARP Packet is an ARP Reply\n");
