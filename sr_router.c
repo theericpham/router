@@ -183,6 +183,12 @@ void handlePacket(struct Instance* sr,
 
   /*First need to figure out what protocol is running above Ethernet here.*/
   uint16_t ether_type = ethertype(packet);
+  
+  /* Debug Statements on Ethertype */
+  fprintf(stderr, "*** Parsed Ether Type: %x\n", ether_type);
+  fprintf(stderr, "*** ARP Ether Type: %x\n", ethertype_ip);
+  fprintf(stderr, "*** IP  Ether Type: %x\n", ethertype_arp);
+  
   switch ( ether_type ) {
     case ethertype_ip :
       printf("*** Handling IP packet\n");
