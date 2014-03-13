@@ -275,6 +275,10 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
         memcpy(ethernet_header->ether_dhost, arp_header->ar_tha, ETHERNET_ADDRESS_LENGTH);
         memcpy(ethernet_header->ether_shost, arp_header->ar_sha, ETHERNET_ADDRESS_LENGTH);
         
+        fprintf(stderr, "*** Finishined reformatting ARP Reply\n");
+        printEthernetHeader(&ethernet_header);
+        pringArpHeader(&arp_header);
+        
         /* send packet */
         sendPacket(sr, packet, len, interface);        
       }
