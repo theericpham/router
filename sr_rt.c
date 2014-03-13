@@ -195,5 +195,15 @@ struct RoutingTable* findLpmRoute(struct Instance* sr, uint32_t dest) {
         len = ntohl(iter->mask.s_addr);
     }
   }
+  
+  fprintf(stderr, "*** Printing Routing Table\n");
+  printRoutingTable(sr);
+  
+  if (result) {
+    fprintf(stderr, "*** Found Longest Prefix Match for Address %i:\n", dest);
+    printRoutingEntry(result);    
+  } else {
+    fprintf(stderr, "*** No Routing Entry Found for Address %i\n", dest)
+  }
   return result;
 }
