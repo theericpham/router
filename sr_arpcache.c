@@ -41,6 +41,8 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     struct RawFrame* packet;
     for (packet = request->packets; packet != NULL; packet = packet->next) {
       ip_hdr = (struct IpHeader*) (packet + ETHERNET_HEADER_LENGTH);
+      fprintf(stderr, "*** Parsed IP Packet Waiting on this ARP Request:\n");
+      printIpHeader((uint8_t*) ip_hdr);
       if (sendIcmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
         fprintf(stderr, "*** Unable to send ICMP\n");/* print error message */
     }
@@ -56,16 +58,24 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
   
     /* Get the details of the interface the ARP request wants us to send from */
     struct Interface* interface = getInterface(sr, request->interface);
+    if (interface) {
+      fprintf(stderr, "*** Found Interface %s\n", interface->name);
+      printInterface(interface);
+    }
+    else {
+      fprintf(stderr, "*** No Interface Found for ARP Request\n");
+    }
   
     /* fill in arp header */
-    arp_header->ar_hrd = arp_hardware_ethernet;
-    arp_header->ar_pro = ethertype_ip;
+    arp_header->ar_hrd = htons(arp_hardware_ethernet);
+    arp_header->ar_pro = htons(ethertype_ip);
     arp_header->ar_hln = ETHERNET_ADDRESS_LENGTH;
-    arp_header->ar_pln = IP_ADDRESS_LENGTH;
-    arp_header->ar_op  = arp_op_request;
+    arp_header->ar_pln = htons(IP_ADDRESS_LENGTH);
+    arp_header->ar_op  = htons(arp_op_request);
     arp_header->ar_sip = interface->ip;
     arp_header->ar_tip = request->ip;
     memcpy(arp_header->ar_sha, interface->addr, ETHERNET_ADDRESS_LENGTH);
+    fprintf(stderr, "*** Formed ARP Request Header\n");
   
     /* move to frameAndSend */
     /*memcpy(ether_hdr->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);
@@ -78,7 +88,8 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     printArpHeader((uint8_t*) arp_header);
   
     /* previously  sendPacket(sr, response, len, interface->name);*/
-	  frameAndSendPacket(sr, response, length, BROADCAST_MAC, request->interface);
+    /* TODO: request->interface is NULL */
+    frameAndSendPacket(sr, response, length, BROADCAST_MAC, request->interface);
   
     /* update request info */
     request->sent = time(NULL);
