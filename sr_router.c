@@ -111,7 +111,7 @@ int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t
   
   /* TODO: fill in ip_p = ip_icmp */
   struct IpHeader* ip_header = (struct IpHeader*) (response_packet + IP_OFFSET);
-  ip_header->ip_p = ip_icmp
+  ip_header->ip_p = ipProtocol_icmp;
   
   /* fill in icmp header */
 	struct IcmpHeader* icmp_header = (struct IcmpHeader*) (response_packet + ICMP_OFFSET);
