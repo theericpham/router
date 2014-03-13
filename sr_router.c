@@ -71,7 +71,7 @@ int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int leng
 	ip_header->ip_id  = 0;
 	ip_header->ip_off = IP_DF;
 	ip_header->ip_ttl = IP_DEFAULT_TTL;
-	ip_header->ip_p   = ipProtocol_icmp; /* TODO: Change this */
+	/* ip_header->ip_p   = ipProtocol_icmp; */ /* CHANGED: Moved to sendIcmp */
 	/* Specific things for this packet */
 	struct Interface* source_interface = getInterface(sr, interface);
 	ip_header->ip_dst = destination_ip;
@@ -108,9 +108,13 @@ int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t
 	/* construct headers */
 	int length = ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH + ICMP_HEADER_LENGTH;
 	uint8_t* response_packet = (uint8_t*) malloc(length);
-	struct IcmpHeader* icmp_header  = (struct IcmpHeader*) (response_packet + ICMP_OFFSET);
-
-	/* fill in icmp header */
+  
+  /* TODO: fill in ip_p = ip_icmp */
+  struct IpHeader* ip_header = (struct IpHeader*) (response_packet + IP_OFFSET);
+  ip_header->ip_p = ip_icmp
+  
+  /* fill in icmp header */
+	struct IcmpHeader* icmp_header = (struct IcmpHeader*) (response_packet + ICMP_OFFSET);
 	icmp_header->icmp_type = type;
 	icmp_header->icmp_code = code;
 	icmp_header->icmp_sum  = checksum(response_packet + ICMP_OFFSET, ICMP_HEADER_LENGTH);
@@ -197,7 +201,7 @@ void handlePacket(struct Instance* sr,
 
 void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned int len, char* interface) {
   /* First do the length check. Unfortunately, I don't understand this part so I'm gonna skip it */
-  if ( len < IP_HEADER_LENGTH )
+  if ( len < ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH )
     printf("*** Error: bad IP header length %d\n", len);
     /* Should we also send an ICMP type 12 code 2 bad header length? */
   
@@ -255,7 +259,7 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
         
         /* router interface becomes source */
         memcpy(arp_header->ar_sha, target_interface->addr, ETHERNET_ADDRESS_LENGTH);
-        arp_header->ar_tip = target_interface->ip;
+        arp_header->ar_sip = target_interface->ip;
         
         /* flip arp request to reply */
         arp_header->ar_op = arp_op_reply;
