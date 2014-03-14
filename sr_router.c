@@ -52,6 +52,7 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, char* interface_nam
   struct Interface* interface  = getInterface(sr, interface_name);
   if (interface) {
     fprintf(stderr, "*** Found Interface\n");
+    printInterface(interface);
   }
   else {
     fprintf(stderr, "*** No Interface Found\n");
@@ -66,7 +67,7 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, char* interface_nam
   
   printEthernetHeader(packet); /* Fixed: Was &packet, might cause problems. */
     
-  sendPacket(sr, packet, length, interface_name);
+  /* sendPacket(sr, packet, length, interface_name); */
   
   return 0;
 }

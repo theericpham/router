@@ -1,4 +1,4 @@
-#define SKIP_ARP_SWEEP 1	/* Turn off periodic sweep for debugging */
+#define SKIP_ARP_SWEEP 0	/* Turn off periodic sweep for debugging */
 
 #include <netinet/in.h>
 #include <stdlib.h>
@@ -41,7 +41,7 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     fprintf(stderr, "*** Preparing to send ICMP for ARP Request\n");
     struct RawFrame* packet;
     for (packet = request->packets; packet != NULL; packet = packet->next) {
-      ip_hdr = (struct IpHeader*) (packet + ETHERNET_HEADER_LENGTH);
+      ip_hdr = (struct IpHeader*) (packet->buf + ETHERNET_HEADER_LENGTH);
       fprintf(stderr, "*** Parsed IP Packet Waiting on this ARP Request:\n");
       printIpHeader((uint8_t*) ip_hdr);
       if (sendIcmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
@@ -85,7 +85,6 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     memcpy(arp_header->ar_tha, BROADCAST_MAC, ETHERNET_ADDRESS_LENGTH);
     
     /* debug statement */
-    printEthernetHeader(response);
     printArpHeader((uint8_t*) arp_header);
   
     /* previously  sendPacket(sr, response, len, interface->name);*/
