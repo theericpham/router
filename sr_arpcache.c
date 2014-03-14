@@ -1,3 +1,5 @@
+#define SKIP_ARP_SWEEP 1	/* Turn off periodic sweep for debugging */
+
 #include <netinet/in.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -23,7 +25,7 @@
 
 unsigned char BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-int frameAndSendPacket(struct Instance* sr, uint8_t* packet, unsigned int len, unsigned char* mac, char* name);
+int frameAndSendPacket(struct Instance* sr, uint8_t* packet, char* interface_name, unsigned int len, unsigned char* mac);
 int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface);
 
 int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {  
@@ -89,7 +91,7 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
   
     /* previously  sendPacket(sr, response, len, interface->name);*/
     /* TODO: request->interface is NULL */
-    frameAndSendPacket(sr, response, length, BROADCAST_MAC, request->interface);
+    frameAndSendPacket(sr, response, request->interface, length, BROADCAST_MAC);
   
     /* update request info */
     request->sent = time(NULL);
@@ -105,6 +107,8 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
   See the comments in the header file for an idea of what it should look like.
 */
 void arpCacheSweepRequests(struct Instance *sr) { 
+  if (SKIP_ARP_SWEEP)
+    return;  
   assert(sr);
   struct ArpRequest* req = sr->cache.requests;
   int err;
