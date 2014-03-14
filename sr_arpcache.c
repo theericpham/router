@@ -71,7 +71,7 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     arp_header->ar_hrd = htons(arp_hardware_ethernet);
     arp_header->ar_pro = htons(ethertype_ip);
     arp_header->ar_hln = ETHERNET_ADDRESS_LENGTH;
-    arp_header->ar_pln = htons(IP_ADDRESS_LENGTH);
+    arp_header->ar_pln = IP_ADDRESS_LENGTH;
     arp_header->ar_op  = htons(arp_op_request);
     arp_header->ar_sip = interface->ip;
     arp_header->ar_tip = request->ip;

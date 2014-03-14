@@ -87,4 +87,30 @@ sr_arpcache.c
 sr_icmp.c --> new file
   sr_send_icmp(sr_instance* sr, uint8_t type, uint8_t code, uint32_t dip, uint8_t* payload, char* interface)
     NOTE: why are there 2 structs for icmp and which one do we use?
+    
+    
+/*****************************************/
+/**********    HANDLE IP    **************/
+/*****************************************/
+if len of raw frame < ethernet header + ip header
+  return error
+  
+get the ip header
+validate the checksum
+check if the ip destination is one of the routers interfaces --> getInterfaceByIp(sr, destination_ip)
+if the interface belongs to the router
+  if the payload protocol is icmp
+    if len of raw frame < ethernet + ip + icmp header
+      return error
+    get the icmp header
+    validate icmp checksum
+    if the icmp is an echo request
+      format and send an icmp echo reply
+  if the payload protocol isn't icmp, then just try to foward the packet
+    get the next hop route to the ip destination
+    if no route is found, send an icmp host unreachable
+    decrement ttl
+    if ttl becomes 0, send icmp ttl expired
+    recompute checksum
+    forward packet
       

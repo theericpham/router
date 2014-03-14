@@ -203,9 +203,9 @@ void handlePacket(struct Instance* sr,
   uint16_t ether_type = ethertype(packet);
   
   /* Debug Statements on Ethertype */
-  fprintf(stderr, "*** Parsed Ether Type: %x\n", ether_type);
-  fprintf(stderr, "*** IP Ether Type: %x\n", ethertype_ip);
-  fprintf(stderr, "*** ARP  Ether Type: %x\n", ethertype_arp);
+  /* fprintf(stderr, "*** Parsed Ether Type: %x\n", ether_type); */
+  /* fprintf(stderr, "*** IP Ether Type: %x\n", ethertype_ip); */
+  /* fprintf(stderr, "*** ARP  Ether Type: %x\n", ethertype_arp); */
   
   switch ( ether_type ) {
     case ethertype_ip :
@@ -298,7 +298,8 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
         printArpHeader((uint8_t*)arp_header); /* Fixed: was &arp_header */
         
         /* send packet */
-        sendPacket(sr, packet, len, interface);        
+        sendPacket(sr, packet, len, interface); 
+        fprintf(stderr, "*** Sent ARP Reply\n");       
       }
       else {
         fprintf(stderr, "*** ARP Packet was neither an ARP Request nor ARP Reply\n");
