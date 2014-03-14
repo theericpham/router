@@ -25,7 +25,6 @@
 
 unsigned char BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-int frameAndSendPacket(struct Instance* sr, uint8_t* packet, char* interface_name, unsigned int len, unsigned char* mac);
 int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface);
 
 int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {  
@@ -91,7 +90,7 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
   
     /* previously  sendPacket(sr, response, len, interface->name);*/
     /* TODO: request->interface is NULL */
-    frameAndSendPacket(sr, response, request->interface, length, BROADCAST_MAC);
+    frameAndSendPacket(sr, response, request->interface, length, BROADCAST_MAC, ethertype_arp);
   
     /* update request info */
     request->sent = time(NULL);

@@ -153,4 +153,6 @@ void *arpCacheTimeout(void *cache_ptr);
 /* Handles and sends ARP requests waiting in the queue. */
 int handleArpRequest(struct Instance* sr, struct ArpRequest* req);
 
+int frameAndSendPacket(struct Instance*, uint8_t*, char*, unsigned int, unsigned char*, enum Ethertype);
+
 #endif
