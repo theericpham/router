@@ -35,7 +35,7 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     return -1;
   }
     
-  fprintf(stderr, "*** It's been a while since we last sent this ARP Request\n");
+  /* fprintf(stderr, "*** It's been a while since we last sent this ARP Request\n"); */
   if (request->times_sent >= ARP_REQUEST_SEND_LIMIT) {
     fprintf(stderr, "*** ARP Request has reached send limit\n");
     fprintf(stderr, "*** Preparing to send ICMP for ARP Request\n");
@@ -59,13 +59,13 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
   
     /* Get the details of the interface the ARP request wants us to send from */
     struct Interface* interface = getInterface(sr, request->interface);
-    if (interface) {
+    /* if (interface) {
       fprintf(stderr, "*** Found Interface %s\n", interface->name);
       printInterface(interface);
     }
     else {
       fprintf(stderr, "*** No Interface Found for ARP Request\n");
-    }
+    } */
   
     /* fill in arp header */
     arp_header->ar_hrd = htons(arp_hardware_ethernet);
@@ -76,7 +76,7 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     arp_header->ar_sip = interface->ip;
     arp_header->ar_tip = request->ip;
     memcpy(arp_header->ar_sha, interface->addr, ETHERNET_ADDRESS_LENGTH);
-    fprintf(stderr, "*** Formed ARP Request Header\n");
+    
   
     /* move to frameAndSend */
     /*memcpy(ether_hdr->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);
@@ -85,6 +85,7 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     memcpy(arp_header->ar_tha, BROADCAST_MAC, ETHERNET_ADDRESS_LENGTH);
     
     /* debug statement */
+    fprintf(stderr, "*** Modified ARP Header\n");
     printArpHeader((uint8_t*) arp_header);
   
     /* previously  sendPacket(sr, response, len, interface->name);*/
