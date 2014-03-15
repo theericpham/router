@@ -63,11 +63,11 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, char* interface_nam
   memcpy(frame->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);  /* src is interface MAC address */
   fprintf(stderr, "*** Finished Setting MAC Addresses in Frame\n");
   
-  frame->ether_type = packet_ethertype;
+  frame->ether_type = htons(packet_ethertype);
   
   printEthernetHeader(packet); /* Fixed: Was &packet, might cause problems. */
     
-  /* sendPacket(sr, packet, length, interface_name); */
+  sendPacket(sr, packet, length, interface_name);	
   
   return 0;
 }

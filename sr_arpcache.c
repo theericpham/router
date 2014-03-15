@@ -1,4 +1,4 @@
-#define SKIP_ARP_SWEEP 0	/* Turn off periodic sweep for debugging */
+#define SKIP_ARP_SWEEP 1	/* Turn off periodic sweep for debugging */
 
 #include <netinet/in.h>
 #include <stdlib.h>
