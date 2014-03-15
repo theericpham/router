@@ -72,11 +72,8 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, char* interface_nam
   return 0;
 }
 
-int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int length, char* interface) {
-  fprintf(stderr, "*** Sending IP Packet\n");
-	/* First get a pointer to the IP header of this data */
+int makeIpPacket(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int length, char* interface) {
 	struct IpHeader* ip_header = (struct IpHeader*)(data + ETHERNET_HEADER_LENGTH);
-	/* Generic IP header information */
 	ip_header->ip_v   = IP_VERSION_4;
 	ip_header->ip_hl  = IP_HEADER_LEN;
 	ip_header->ip_tos = 0;
@@ -84,18 +81,27 @@ int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int leng
 	ip_header->ip_id  = htons(0);
 	ip_header->ip_off = htons(IP_DF);
 	ip_header->ip_ttl = IP_DEFAULT_TTL;
-	/* ip_header->ip_p   = ipProtocol_icmp; */ /* CHANGED: Moved to sendIcmp */
-  printIpHeader((uint8_t*)ip_header);
-  
 	/* Specific things for this packet */
 	struct Interface* source_interface = getInterface(sr, interface);
 	ip_header->ip_dst = destination_ip;
 	ip_header->ip_src = source_interface->ip;
+	
 	/* compute ip header checksum */
+	ip_header->ip_sum = 0;
 	ip_header->ip_sum = checksum(data + ETHERNET_HEADER_LENGTH, IP_HEADER_LENGTH);
+	return 0;
+}
+
+int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int length, char* interface) {
+  fprintf(stderr, "*** Sending IP Packet\n");
+	/* First get a pointer to the IP header of this data */
+	struct IpHeader* ip_header = (struct IpHeader*)(data + ETHERNET_HEADER_LENGTH);
+	
+  printIpHeader((uint8_t*)ip_header);
+  
 	
 	/* Next look up the route to the destination IP */
-	struct RoutingTable* route = findLpmRoute(sr, destination_ip);
+	struct RoutingTable* route = findLpmRoute(sr, ntohl(destination_ip));
 	if (!route)
 		return -1; /* TODO print error or send ICMP? */
 	/* The only thing we'll be using from this route is which one of our interfaces it uses. */
@@ -126,7 +132,7 @@ int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t
 	uint8_t* response_packet = (uint8_t*) malloc(length);
   fprintf(stderr, "*** Created Ethernet Frame for ICMP\n");
     
-  /* TODO: fill in ip_p = ip_icmp */
+  makeIpPacket(sr, destination_ip, response_packet, length, interface);
   struct IpHeader* ip_header = (struct IpHeader*) (response_packet + IP_OFFSET);
   ip_header->ip_p = ipProtocol_icmp;
   fprintf(stderr, "*** Created IP Packet for ICMP\n");
@@ -273,7 +279,7 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
         /* forward pending packets */
         struct RawFrame* pending_packet = arp_request ? arp_request->packets : NULL;
         for (; pending_packet != NULL; pending_packet = pending_packet->next)
-          frameAndSendPacket(sr, pending_packet->buf, pending_packet->iface, pending_packet->len, arp_header->ar_sha, ethertype_arp);
+          frameAndSendPacket(sr, pending_packet->buf, pending_packet->iface, pending_packet->len, arp_header->ar_sha, ethertype_ip);
       }
       else if (arp_code == arp_op_request) {
         fprintf(stderr, "*** ARP Packet is an ARP Request\n");
