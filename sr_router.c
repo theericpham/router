@@ -250,6 +250,7 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
   printIpHeader((uint8_t*)ip_header);
   if ( checksum_received != checksum_computed )
   	printf("*** Checksum doesn't match :(");
+  ip_header->ip_sum = checksum_computed;
   /* I think it's time to send the packet on its next hop */
   sendIp(sr, ip_header->ip_dst, frame_unformatted, len, interface);
 }
