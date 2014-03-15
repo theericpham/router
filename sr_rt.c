@@ -21,6 +21,7 @@
 
 #include "sr_rt.h"
 #include "sr_router.h"
+#include "sr_utils.h"	
 
 #define ERR_NULL_ROUTING_TABLE -1
 
@@ -181,14 +182,16 @@ void printRoutingEntry(struct RoutingTable* entry)
 
 /* return longest prefix match route if any */
 struct RoutingTable* findLpmRoute(struct Instance* sr, uint32_t dest) {
-  int len = 0;
-  struct RoutingTable* result;
+  uint32_t len = 0;
+  struct RoutingTable* result = 0;
   struct RoutingTable* iter;
   
   for(iter = sr->routing_table; iter != 0; iter = iter->next) { /*Fixed: replaced cur with iter*/
   /*Fixed: (iter->mask).s_addr should be iter->mask.s_addr */
-  
-    if (((dest & iter->mask.s_addr) == (iter->dest.s_addr & iter->mask.s_addr)) &&
+    fprintf(stderr, "Comparing "); printIpAddress_int(dest & ntohl(iter->mask.s_addr));
+    fprintf(stderr, " with "); printIpAddress_int(ntohl(iter->dest.s_addr & iter->mask.s_addr)); fprintf(stderr, "\n");
+    fprintf(stderr, "Comparing length of "); printIpAddress_int(len); fprintf(stderr, " with "); printIpAddress_int(ntohl(iter->mask.s_addr)); fprintf(stderr, "\n");
+    if (((dest & ntohl(iter->mask.s_addr)) == ntohl(iter->dest.s_addr & iter->mask.s_addr)) &&
       (len <= ntohl(iter->mask.s_addr))) {
         result = iter;
         len = ntohl(iter->mask.s_addr);
