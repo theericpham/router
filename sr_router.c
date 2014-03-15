@@ -67,6 +67,9 @@ int frameAndSendPacket(struct Instance* sr, uint8_t* packet, char* interface_nam
   
   fprintf(stderr, "*** Modified Ethernet Header\n");
   printEthernetHeader(packet); /* Fixed: Was &packet, might cause problems. */
+  
+  fprintf(stderr, "*** Sending Raw Frame\n");
+  printHeaders(packet, length);
     
   sendPacket(sr, packet, length, interface_name);	
   fprintf(stderr, "*** Sent Raw Frame\n");
@@ -100,9 +103,6 @@ int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int leng
   /* fprintf(stderr, "*** Sending IP Packet\n"); */
 	/* First get a pointer to the IP header of this data */
 	struct IpHeader* ip_header = (struct IpHeader*)(data + ETHERNET_HEADER_LENGTH);
-	
-  printIpHeader((uint8_t*)ip_header);
-  
 	
 	/* Next look up the route to the destination IP */
 	struct RoutingTable* route = findLpmRoute(sr, ntohl(destination_ip));
@@ -247,7 +247,6 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
   uint16_t checksum_received = ip_header->ip_sum;
   ip_header->ip_sum = 0;
   uint16_t checksum_computed = checksum(ip_header, IP_HEADER_LENGTH);
-  printIpHeader((uint8_t*)ip_header);
   if ( checksum_received != checksum_computed )
   	printf("*** Checksum doesn't match :(");
   /* I think it's time to send the packet on its next hop */
@@ -306,6 +305,9 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
         struct EthernetHeader* ethernet_header = (struct EthernetHeader*) packet;
         memcpy(ethernet_header->ether_dhost, arp_header->ar_tha, ETHERNET_ADDRESS_LENGTH);
         memcpy(ethernet_header->ether_shost, arp_header->ar_sha, ETHERNET_ADDRESS_LENGTH);
+        
+        fprintf(stderr, "*** Modified Ethernet Header\n");
+        printHeaders(packet, len);
         
         /* fprintf(stderr, "*** Finishined reformatting ARP Reply\n"); */
         /* printEthernetHeader(packet); */ /* Fixed: was &packet */
