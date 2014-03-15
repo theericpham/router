@@ -199,6 +199,7 @@ void handlePacket(struct Instance* sr,
   assert(interface);
 
   printf("*** -> Received packet of length %d \n",len);
+  printHeaders(packet, len);
 
   /*First need to figure out what protocol is running above Ethernet here.*/
   uint16_t ether_type = ethertype(packet);

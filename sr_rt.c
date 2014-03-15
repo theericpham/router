@@ -185,7 +185,6 @@ struct RoutingTable* findLpmRoute(struct Instance* sr, uint32_t dest) {
   struct RoutingTable* result;
   struct RoutingTable* iter;
   
-  
   for(iter = sr->routing_table; iter != 0; iter = iter->next) { /*Fixed: replaced cur with iter*/
   /*Fixed: (iter->mask).s_addr should be iter->mask.s_addr */
   
