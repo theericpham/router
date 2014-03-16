@@ -263,48 +263,39 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
   }	
   ip_header->ip_sum = checksum_computed; /* Don't forgot to set the checksum! */
   
-  /* Get target interface */
   struct Interface* target_interface = getInterfaceByIp(sr, ip_header->ip_dst);
-  if (target_interface) {
-    /* If ICMP echo request, then reply */
+  if (target_interface){
+    /* the interface belongs to the router */
     if (ip_header->ip_p == ipProtocol_icmp) {
-      /* validate length */
-      if (len < ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH + ICMP_HEADER_LENGTH)
-        return;
-      
-      /* validate checksum */
-      struct IcmpHeader* icmp_header = (struct IcmpHeader*) (frame_unformatted + ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH);
-      uint16_t icmp_check_received = icmp_header->icmp_sum;
-      icmp_header->icmp_sum  = 0;
-      uint16_t icmp_checksum_computed = checksum(icmp_header, ICMP_HEADER_LENGTH);
-      if (icmp_check_received != icmp_checksum_computed) {
-        fprintf(stderr, "*** ICMP Checksum Doesn't Match\nn");
+      /* Send echo reply to echo request */
+      if (len < ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH + ICMP_HEADER_LENGTH) {
         return;
       }
       
-      /* reply to echo request */
+      struct IcmpHeader* icmp_header = (struct IcmpHeader*) (frame_unformatted + ICMP_OFFSET);
+      uint16_t icmp_checksum_received = icmp_header->icmp_sum;
+      icmp_header->icmp_sum = 0;
+      uint16_t icmp_checksum_computed = checksum(icmp_header, ICMP_HEADER_LENGTH);
+      if ( icmp_checksum_received != icmp_checksum_computed ) {
+        return;
+      }
+      
       if (icmp_header->icmp_type == ICMP_TYPE_ECHO_REQ && icmp_header->icmp_code == ICMP_CODE_ECHO_REQ) {
-        sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_ECHO_REPLY, ICMP_CODE_ECHO_REPLY, target_interface->name);
-      } 
+        sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_ECHO_REPLY, ICMP_CODE_ECHO_REPLY, interface);
+      }
     }
     return;
   }
-  /* The target interface isn't on the router, so just foward the packet */ 
-  struct RoutingTable* route = findLpmRoute(sr, ntohl(ip_header->ip_dst));
   
-  /* Decrement ttl and send icmp if expires */
   ip_header->ip_ttl--;
   if (ip_header->ip_ttl <= 0) {
-    sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_TTL_EXP, ICMP_CODE_TTL_EXP, route->interface);
-    return;
+    sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_TTL_EXP, ICMP_CODE_TTL_EXP, interface);
   }
-  
-  /* Recompute checksum */
   ip_header->ip_sum = 0;
   ip_header->ip_sum = checksum(ip_header, IP_HEADER_LENGTH);
   
-  /* I think it's time to send the packet on its next hop */
-  sendIp(sr, ip_header->ip_dst, frame_unformatted, len, route->interface);
+  /* don;t change this */
+  sendIp(sr, ip_header->ip_dst, frame_unformatted, len, interface);
 }
 
 void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {
