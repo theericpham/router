@@ -33,12 +33,15 @@
 #define IP_HEADER_LEN  5
 #define IP_DEFAULT_TTL 64
 
-#define ICMP_TYPE_ECHO_REQ        8
-#define ICMP_CODE_ECHO_REQ        0
-#define ICMP_TYPE_ECHO_REPLY      0
-#define ICMP_CODE_ECHO_REPLY      0
-#define ICMP_TYPE_TTL_EXP         11
-#define ICMP_CODE_TTL_EXP         0
+#define ICMP_TYPE_ECHO_REQ         8
+#define ICMP_CODE_ECHO_REQ         0
+#define ICMP_TYPE_ECHO_REPLY       0
+#define ICMP_CODE_ECHO_REPLY       0
+#define ICMP_TYPE_TTL_EXP          11
+#define ICMP_CODE_TTL_EXP          0
+#define ICMP_TYPE_UNREACHABLE      3
+#define ICMP_CODE_PORT_UNREACHABLE 3
+#define ICMP_CODE_NET_UNREACHABLE  0
 
 /*---------------------------------------------------------------------
  * Declaration of Helper Functions
@@ -110,11 +113,15 @@ int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int leng
   /* fprintf(stderr, "*** Sending IP Packet\n"); */
 	/* First get a pointer to the IP header of this data */
 	struct IpHeader* ip_header = (struct IpHeader*)(data + ETHERNET_HEADER_LENGTH);
+  ip_header->ip_sum = 0;
+  ip_header->ip_sum = checksum(ip_header, IP_HEADER_LENGTH);
 	
 	/* Next look up the route to the destination IP */
 	struct RoutingTable* route = findLpmRoute(sr, ntohl(destination_ip));
-	if (!route)
-		return -1; /* TODO print error or send ICMP? */
+	if (!route){
+    sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_NET_UNREACHABLE, interface);
+	  return -1;
+	}
 	/* The only thing we'll be using from this route is which one of our interfaces it uses. */
 	char* sending_interface = route->interface;
 	
@@ -290,6 +297,7 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
   ip_header->ip_ttl--;
   if (ip_header->ip_ttl <= 0) {
     sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_TTL_EXP, ICMP_CODE_TTL_EXP, interface);
+    return;
   }
   ip_header->ip_sum = 0;
   ip_header->ip_sum = checksum(ip_header, IP_HEADER_LENGTH);
