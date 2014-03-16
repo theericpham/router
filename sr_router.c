@@ -37,6 +37,8 @@
 #define ICMP_CODE_ECHO_REQ        0
 #define ICMP_TYPE_ECHO_REPLY      0
 #define ICMP_CODE_ECHO_REPLY      0
+#define ICMP_TYPE_TTL_EXP         11
+#define ICMP_CODE_TTL_EXP         0
 
 /*---------------------------------------------------------------------
  * Declaration of Helper Functions
@@ -287,10 +289,22 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
     }
     return;
   }
+  /* The target interface isn't on the router, so just foward the packet */ 
+  struct RoutingTable* route = findLpmRoute(sr, ntohl(ip_header->ip_dst));
   
+  /* Decrement ttl and send icmp if expires */
+  ip_header->ip_ttl--;
+  if (ip_header->ip_ttl <= 0) {
+    sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_TTL_EXP, ICMP_CODE_TTL_EXP, route->interface);
+    return;
+  }
+  
+  /* Recompute checksum */
+  ip_header->ip_sum = 0;
+  ip_header->ip_sum = checksum(ip_header, IP_HEADER_LENGTH);
   
   /* I think it's time to send the packet on its next hop */
-  sendIp(sr, ip_header->ip_dst, frame_unformatted, len, interface);
+  sendIp(sr, ip_header->ip_dst, frame_unformatted, len, route->interface);
 }
 
 void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface) {
