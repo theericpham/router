@@ -20,7 +20,6 @@
 
 #define ICMP_TYPE_UNREACHABLE     3
 #define ICMP_CODE_HOST            1
-
 #define IP_ADDRESS_LENGTH         4
 
 unsigned char BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -43,7 +42,6 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     for (packet = request->packets; packet != NULL; packet = packet->next) {
       ip_hdr = (struct IpHeader*) (packet->buf + ETHERNET_HEADER_LENGTH);
       fprintf(stderr, "*** Parsed IP Packet Waiting on this ARP Request:\n");
-      printIpHeader((uint8_t*) ip_hdr);
       if (sendIcmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
         fprintf(stderr, "*** Unable to send ICMP\n");/* print error message */
     }

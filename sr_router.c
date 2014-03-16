@@ -33,6 +33,11 @@
 #define IP_HEADER_LEN  5
 #define IP_DEFAULT_TTL 64
 
+#define ICMP_TYPE_ECHO_REQ        8
+#define ICMP_CODE_ECHO_REQ        0
+#define ICMP_TYPE_ECHO_REPLY      0
+#define ICMP_CODE_ECHO_REPLY      0
+
 /*---------------------------------------------------------------------
  * Declaration of Helper Functions
  *
@@ -145,6 +150,7 @@ int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t
 	struct IcmpHeader* icmp_header = (struct IcmpHeader*) (response_packet + ICMP_OFFSET);
 	icmp_header->icmp_type = type;
 	icmp_header->icmp_code = code;
+  icmp_header->icmp_sum  = 0;
 	icmp_header->icmp_sum  = checksum(response_packet + ICMP_OFFSET, ICMP_HEADER_LENGTH);
   fprintf(stderr, "*** Created ICMP Header for ICMP");
 
@@ -237,19 +243,52 @@ void handlePacket(struct Instance* sr,
 
 void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned int len, char* interface) {
   /* First do the length check. Unfortunately, I don't understand this part so I'm gonna skip it */
-  if ( len < ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH )
+  if ( len < ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH ) {
     printf("*** Error: bad IP header length %d\n", len);
-    /* Should we also send an ICMP type 12 code 2 bad header length? */
-  
-  /*Need to encapsulate the frame into an IP header object*/
+    return;
+  }
+
+  /* Need to encapsulate the frame into an IP header object */
   struct IpHeader* ip_header  = (struct IpHeader*)(frame_unformatted + ETHERNET_HEADER_LENGTH);
+  
   /* Make sure the checksum is OK */
   uint16_t checksum_received = ip_header->ip_sum;
   ip_header->ip_sum = 0;
   uint16_t checksum_computed = checksum(ip_header, IP_HEADER_LENGTH);
-  if ( checksum_received != checksum_computed )
-  	printf("*** Checksum doesn't match :(");
-  ip_header->ip_sum = checksum_computed;
+  if ( checksum_received != checksum_computed ) {
+    printf("*** Checksum doesn't match :(");
+    return;
+  }	
+  ip_header->ip_sum = checksum_computed; /* Don't forgot to set the checksum! */
+  
+  /* Get target interface */
+  struct Interface* target_interface = getInterfaceByIp(sr, ip_header->ip_dst);
+  if (target_interface) {
+    /* If ICMP echo request, then reply */
+    if (ip_header->ip_p == ipProtocol_icmp) {
+      /* validate length */
+      if (len < ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH + ICMP_HEADER_LENGTH)
+        return;
+      
+      /* validate checksum */
+      struct IcmpHeader* icmp_header = (struct IcmpHeader*) (frame_unformatted + ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH);
+      uint16_t icmp_check_received = icmp_header->icmp_sum;
+      icmp_header->icmp_sum  = 0;
+      uint16_t icmp_checksum_computed = checksum(icmp_header, ICMP_HEADER_LENGTH);
+      if (icmp_check_received != icmp_checksum_computed) {
+        fprintf(stderr, "*** ICMP Checksum Doesn't Match\nn");
+        return;
+      }
+      
+      /* reply to echo request */
+      if (icmp_header->icmp_type == ICMP_TYPE_ECHO_REQ && icmp_header->icmp_code == ICMP_CODE_ECHO_REQ) {
+        sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_ECHO_REPLY, ICMP_CODE_ECHO_REPLY, target_interface->name);
+      } 
+    }
+    return;
+  }
+  
+  
   /* I think it's time to send the packet on its next hop */
   sendIp(sr, ip_header->ip_dst, frame_unformatted, len, interface);
 }
