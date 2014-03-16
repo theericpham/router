@@ -155,6 +155,7 @@ int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t
   
   /* fill in icmp header */
 	struct IcmpHeader* icmp_header = (struct IcmpHeader*) (response_packet + ICMP_OFFSET);
+	memset(icmp_header, 0, 8);
 	icmp_header->icmp_type = type;
 	icmp_header->icmp_code = code;
   icmp_header->icmp_sum  = 0;
