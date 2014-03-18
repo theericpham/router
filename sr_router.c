@@ -48,8 +48,6 @@
  *
  *---------------------------------------------------------------------*/
 
-int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface); /*Fixed*/
-
 /* 
  *  Set ethernet frame for a packet by filling in MAC addresses and send the packet 
  */
@@ -117,7 +115,7 @@ int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int leng
 	/* Next look up the route to the destination IP */
 	struct RoutingTable* route = findLpmRoute(sr, ntohl(destination_ip));
 	if (!route){
-    sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_NET_UNREACHABLE, interface);
+    sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_NET_UNREACHABLE, 0, interface);
 	  return -1;
 	}
 	/* The only thing we'll be using from this route is which one of our interfaces it uses. */
@@ -141,31 +139,41 @@ int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int leng
 /* 
  *  Send an ICMP message with type and code fields to dest from router interface 
  */
-int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t code, char* interface) {
+int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t code, uint8_t* original_packet, char* interface) {
   fprintf(stderr, "*** Starting to Send ICMP to Address %i with Type %i, Code %i\n", destination_ip, type, code);
 	/* construct headers */
-	int length = ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH + ICMP_HEADER_LENGTH;
-	uint8_t* response_packet = (uint8_t*) malloc(length);
+	uint8_t* response_packet = (uint8_t*) malloc(ICMP_TOTAL_LENGTH);
   fprintf(stderr, "*** Created Ethernet Frame for ICMP\n");
     
-  makeIpPacket(sr, destination_ip, response_packet, length, interface);
+  makeIpPacket(sr, destination_ip, response_packet, ICMP_TOTAL_LENGTH, interface);
   struct IpHeader* ip_header = (struct IpHeader*) (response_packet + IP_OFFSET);
+  struct IpHeader* original_ip_header = (struct IpHeader*)(original_packet + IP_OFFSET);
+  fprintf(stderr, "Original packet says source ");
+  printIpAddress_int(original_ip_header->ip_src);
+  fprintf(stderr, " and destination ");
+  printIpAddress_int(original_ip_header->ip_dst);
+  fprintf(stderr, "\n");
   ip_header->ip_p = ipProtocol_icmp;
   fprintf(stderr, "*** Created IP Packet for ICMP\n");
   
-  /* fill in icmp header */
+	/* Now the ICMP payload is the entire IP header of the packet that caused the ICMP + the first 8 bytes of data */
+	if ( original_packet )
+		memcpy(response_packet + ICMP_PAYLOAD_OFFSET, original_packet + ETHERNET_HEADER_LENGTH, IP_HEADER_LENGTH + ICMP_SAMPLE_LENGTH);
+	else /* If no packet pointer, it's not needed; fill with 0 -- probably not necessary */
+		memset(response_packet + ICMP_PAYLOAD_OFFSET, 0, IP_HEADER_LENGTH + ICMP_SAMPLE_LENGTH);
+  
+   /* Now that we've copied the original packet, we can set up the ICMP header and compute the checksum */
 	struct IcmpHeader* icmp_header = (struct IcmpHeader*) (response_packet + ICMP_OFFSET);
-	memset(icmp_header, 0, 8);
 	icmp_header->icmp_type = type;
 	icmp_header->icmp_code = code;
-  icmp_header->icmp_sum  = 0;
-	icmp_header->icmp_sum  = checksum(response_packet + ICMP_OFFSET, ICMP_HEADER_LENGTH);
-  fprintf(stderr, "*** Created ICMP Header for ICMP");
+   icmp_header->icmp_sum  = 0;
+	icmp_header->icmp_sum  = checksum(response_packet + ICMP_OFFSET, ICMP_PACKET_LENGTH);
+   fprintf(stderr, "*** Created ICMP Header for ICMP");
 
 	/* Pass the packet to sendIp, which will take care of the IP header formatting and look up the destination in the ARP cache
 	Return whatever status this function returns. */
   
-	return sendIp(sr, destination_ip, response_packet, length, interface);
+	return sendIp(sr, destination_ip, response_packet, ICMP_TOTAL_LENGTH, interface);
 }
 
 /*---------------------------------------------------------------------
@@ -249,6 +257,38 @@ void handlePacket(struct Instance* sr,
   }
 }/* end handlePacket */
 
+int ipChecksumCorrect(struct IpHeader* ip_header) {
+	/* This simple function computes the checksum, compares with received checksum, and restores it */
+	uint16_t checksum_received = ip_header->ip_sum;
+	ip_header->ip_sum = 0;
+	uint16_t checksum_computed = checksum(ip_header, IP_HEADER_LENGTH);
+	ip_header->ip_sum = checksum_received;
+	return checksum_computed == checksum_received;
+}
+
+int icmpChecksumCorrect(struct IcmpHeader* icmp_header) {
+	uint16_t checksum_received = icmp_header->icmp_sum;
+   icmp_header->icmp_sum = 0;
+   uint16_t checksum_computed = checksum(icmp_header, ICMP_HEADER_LENGTH);
+   icmp_header->icmp_sum = checksum_received;
+   return checksum_computed == checksum_received;
+}
+
+void handleIcmpPacket(struct Instance* sr, uint8_t* data, unsigned int len, char* interface) {
+	/* Send echo reply to echo request */
+	if (len < ICMP_PAYLOAD_OFFSET)
+		return;
+      
+   struct IpHeader* ip_header = (struct IpHeader*)(data + ETHERNET_HEADER_LENGTH);
+   struct IcmpHeader* icmp_header = (struct IcmpHeader*) (data + ICMP_OFFSET);
+   if ( !icmpChecksumCorrect(icmp_header) )
+  	   return;
+      
+   if (icmp_header->icmp_type == ICMP_TYPE_ECHO_REQ && icmp_header->icmp_code == ICMP_CODE_ECHO_REQ)
+      /* echo doesn't need the original packet to be sent with the ICMP message, so pass null pointer (0) */
+      sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_ECHO_REPLY, ICMP_CODE_ECHO_REPLY, 0, interface);
+}
+
 void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned int len, char* interface) {
   /* First do the length check. Unfortunately, I don't understand this part so I'm gonna skip it */
   if ( len < ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH ) {
@@ -256,50 +296,28 @@ void handleIpPacket(struct Instance* sr, uint8_t* frame_unformatted, unsigned in
     return;
   }
 
-  /* Need to encapsulate the frame into an IP header object */
   struct IpHeader* ip_header  = (struct IpHeader*)(frame_unformatted + ETHERNET_HEADER_LENGTH);
-  
-  /* Make sure the checksum is OK */
-  uint16_t checksum_received = ip_header->ip_sum;
-  ip_header->ip_sum = 0;
-  uint16_t checksum_computed = checksum(ip_header, IP_HEADER_LENGTH);
-  if ( checksum_received != checksum_computed ) {
-    printf("*** Checksum doesn't match :(");
-    return;
-  }	
-  ip_header->ip_sum = checksum_computed; /* Don't forgot to set the checksum! */
+  if (!ipChecksumCorrect(ip_header))
+  	return;
   
   struct Interface* target_interface = getInterfaceByIp(sr, ip_header->ip_dst);
   if (target_interface){
     /* the interface belongs to the router */
     if (ip_header->ip_p == ipProtocol_icmp) {
-      /* Send echo reply to echo request */
-      if (len < ETHERNET_HEADER_LENGTH + IP_HEADER_LENGTH + ICMP_HEADER_LENGTH) {
-        return;
-      }
-      
-      struct IcmpHeader* icmp_header = (struct IcmpHeader*) (frame_unformatted + ICMP_OFFSET);
-      uint16_t icmp_checksum_received = icmp_header->icmp_sum;
-      icmp_header->icmp_sum = 0;
-      uint16_t icmp_checksum_computed = checksum(icmp_header, ICMP_HEADER_LENGTH);
-      if ( icmp_checksum_received != icmp_checksum_computed ) {
-        return;
-      }
-      
-      if (icmp_header->icmp_type == ICMP_TYPE_ECHO_REQ && icmp_header->icmp_code == ICMP_CODE_ECHO_REQ) {
-        sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_ECHO_REPLY, ICMP_CODE_ECHO_REPLY, interface);
-      }
+      handleIcmpPacket(sr, frame_unformatted, len, interface);
     }
     else {
-    	/* If not an ICMP packet, must be TCP or UDP or something else. Probably client tracerouting us. */
-    	sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_PORT_UNREACHABLE, interface);
+    	/* If not an ICMP packet, must be TCP or UDP or something else. Probably client tracerouting us.
+    	For unreachable messages, need to include original IP packet in ICMP message */
+    	sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_PORT_UNREACHABLE, frame_unformatted, interface);
     }
     return;
   }
   
   ip_header->ip_ttl--;
   if (ip_header->ip_ttl <= 0) {
-    sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_TTL_EXP, ICMP_CODE_TTL_EXP, interface);
+  	/* Need to include original packet in this ICMP message */
+    sendIcmp(sr, ip_header->ip_src, ICMP_TYPE_TTL_EXP, ICMP_CODE_TTL_EXP, frame_unformatted, interface);
     return;
   }
   ip_header->ip_sum = 0;

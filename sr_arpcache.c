@@ -24,8 +24,6 @@
 
 unsigned char BROADCAST_MAC[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-int sendIcmp(struct Instance* sr, uint32_t dest, uint8_t type, uint8_t code, char* interface);
-
 int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {  
   time_t now = time(NULL);
   struct IpHeader* ip_hdr;
@@ -42,7 +40,8 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     for (packet = request->packets; packet != NULL; packet = packet->next) {
       ip_hdr = (struct IpHeader*) (packet->buf + ETHERNET_HEADER_LENGTH);
       fprintf(stderr, "*** Parsed IP Packet Waiting on this ARP Request:\n");
-      if (sendIcmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->iface) < 0)
+      /* Passing packet contents to sendIcmp because unreachable requires original packet contents */
+      if (sendIcmp(sr, ip_hdr->ip_src, ICMP_TYPE_UNREACHABLE, ICMP_CODE_HOST, packet->buf, packet->iface) < 0)
         fprintf(stderr, "*** Unable to send ICMP\n");/* print error message */
     }
     destroyArpRequest(&(sr->cache), request);

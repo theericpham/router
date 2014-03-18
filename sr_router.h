@@ -70,6 +70,7 @@ int readFromServer(struct Instance* );
 /* -- sr_router.c -- */
 void sr_init(struct Instance* );
 void handlePacket(struct Instance* , uint8_t * , unsigned int , char* );
+int sendIcmp(struct Instance*, uint32_t, uint8_t, uint8_t, uint8_t*, char*);
 /*Caleb and Eric's added functions */
 void handleIpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface);
 void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, char* interface);
