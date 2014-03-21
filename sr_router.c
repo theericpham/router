@@ -147,12 +147,6 @@ int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t
     
   makeIpPacket(sr, destination_ip, response_packet, ICMP_TOTAL_LENGTH, interface);
   struct IpHeader* ip_header = (struct IpHeader*) (response_packet + IP_OFFSET);
-  struct IpHeader* original_ip_header = (struct IpHeader*)(original_packet + IP_OFFSET);
-  fprintf(stderr, "Original packet says source ");
-  printIpAddress_int(original_ip_header->ip_src);
-  fprintf(stderr, " and destination ");
-  printIpAddress_int(original_ip_header->ip_dst);
-  fprintf(stderr, "\n");
   ip_header->ip_p = ipProtocol_icmp;
   fprintf(stderr, "*** Created IP Packet for ICMP\n");
   
