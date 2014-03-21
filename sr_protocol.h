@@ -46,12 +46,6 @@
 #endif
 
 
-
-/* FIXME
- * ohh how lame .. how very, very lame... how can I ever go out in public
- * again?! /mc
- */
-
 #ifndef __LITTLE_ENDIAN
 #define __LITTLE_ENDIAN 1
 #endif

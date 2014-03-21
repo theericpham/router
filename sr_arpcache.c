@@ -1,4 +1,4 @@
-#define SKIP_ARP_SWEEP 1	/* Turn off periodic sweep for debugging */
+#define SKIP_ARP_SWEEP 0	/* Turn off periodic sweep for debugging */
 
 #include <netinet/in.h>
 #include <stdlib.h>
@@ -56,13 +56,6 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
   
     /* Get the details of the interface the ARP request wants us to send from */
     struct Interface* interface = getInterface(sr, request->interface);
-    /* if (interface) {
-      fprintf(stderr, "*** Found Interface %s\n", interface->name);
-      printInterface(interface);
-    }
-    else {
-      fprintf(stderr, "*** No Interface Found for ARP Request\n");
-    } */
   
     /* fill in arp header */
     arp_header->ar_hrd = htons(arp_hardware_ethernet);
@@ -73,20 +66,8 @@ int handleArpRequest(struct Instance* sr, struct ArpRequest* request) {
     arp_header->ar_sip = interface->ip;
     arp_header->ar_tip = request->ip;
     memcpy(arp_header->ar_sha, interface->addr, ETHERNET_ADDRESS_LENGTH);
-    
-  
-    /* move to frameAndSend */
-    /*memcpy(ether_hdr->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);
-	  ether_hdr->ether_dhost[i] = 0xFF; */
-
     memcpy(arp_header->ar_tha, BROADCAST_MAC, ETHERNET_ADDRESS_LENGTH);
     
-    /* debug statement */
-    fprintf(stderr, "*** Modified ARP Header\n");
-    printArpHeader((uint8_t*) arp_header);
-  
-    /* previously  sendPacket(sr, response, len, interface->name);*/
-    /* TODO: request->interface is NULL */
     frameAndSendPacket(sr, response, request->interface, length, BROADCAST_MAC, ethertype_arp);
   
     /* update request info */

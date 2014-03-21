@@ -52,29 +52,18 @@
  *  Set ethernet frame for a packet by filling in MAC addresses and send the packet 
  */
 int frameAndSendPacket(struct Instance* sr, uint8_t* packet, char* interface_name, unsigned int length, unsigned char* mac, enum Ethertype packet_ethertype) {
-  /* fprintf(stderr, "*** Framing and Sending Packet\n"); */
   /* get the interface to forward from */
   struct EthernetHeader* frame = (struct EthernetHeader*) packet;
-  /* fprintf(stderr, "*** Parsed Ethernet Frame from Packet\n");
-  fprintf(stderr, "*** Looking for Interface %s\n", interface_name); */
   struct Interface* interface  = getInterface(sr, interface_name);
-  /* if (interface) {
-    fprintf(stderr, "*** Found Interface\n");
-    printInterface(interface);
-  }
-  else {
-    fprintf(stderr, "*** No Interface Found\n");
-  } */
-  
+
   /* set MAC addresses */
   memcpy(frame->ether_dhost, mac, ETHERNET_ADDRESS_LENGTH);              /* dest specified by args */
   memcpy(frame->ether_shost, interface->addr, ETHERNET_ADDRESS_LENGTH);  /* src is interface MAC address */
-  /* fprintf(stderr, "*** Finished Setting MAC Addresses in Frame\n");*/
   
   frame->ether_type = htons(packet_ethertype);
   
   fprintf(stderr, "*** Modified Ethernet Header\n");
-  printEthernetHeader(packet); /* Fixed: Was &packet, might cause problems. */
+  printEthernetHeader(packet);
   
   fprintf(stderr, "*** Sending Raw Frame\n");
   printHeaders(packet, length);
@@ -89,7 +78,7 @@ int makeIpPacket(struct Instance* sr, uint32_t destination_ip, uint8_t* data, in
 	ip_header->ip_v   = IP_VERSION_4;
 	ip_header->ip_hl  = IP_HEADER_LEN;
 	ip_header->ip_tos = 0;
-	ip_header->ip_len = htons(length - ETHERNET_HEADER_LENGTH); /* A little janky but I think it's better than the alternative */
+	ip_header->ip_len = htons(length - ETHERNET_HEADER_LENGTH);
 	ip_header->ip_id  = htons(0);
 	ip_header->ip_off = htons(IP_DF);
 	ip_header->ip_ttl = IP_DEFAULT_TTL;
@@ -140,15 +129,13 @@ int sendIp(struct Instance* sr, uint32_t destination_ip, uint8_t* data, int leng
  *  Send an ICMP message with type and code fields to dest from router interface 
  */
 int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t code, uint8_t* original_packet, char* interface) {
-  fprintf(stderr, "*** Starting to Send ICMP to Address %i with Type %i, Code %i\n", destination_ip, type, code);
+  fprintf(stderr, "*** Sending ICMP to Address %i with Type %i, Code %i\n", destination_ip, type, code);
 	/* construct headers */
 	uint8_t* response_packet = (uint8_t*) malloc(ICMP_TOTAL_LENGTH);
-  fprintf(stderr, "*** Created Ethernet Frame for ICMP\n");
     
   makeIpPacket(sr, destination_ip, response_packet, ICMP_TOTAL_LENGTH, interface);
   struct IpHeader* ip_header = (struct IpHeader*) (response_packet + IP_OFFSET);
   ip_header->ip_p = ipProtocol_icmp;
-  fprintf(stderr, "*** Created IP Packet for ICMP\n");
   
 	/* Now the ICMP payload is the entire IP header of the packet that caused the ICMP + the first 8 bytes of data */
 	if ( original_packet )
@@ -162,7 +149,6 @@ int sendIcmp(struct Instance* sr, uint32_t destination_ip, uint8_t type, uint8_t
 	icmp_header->icmp_code = code;
    icmp_header->icmp_sum  = 0;
 	icmp_header->icmp_sum  = checksum(response_packet + ICMP_OFFSET, ICMP_PACKET_LENGTH);
-   fprintf(stderr, "*** Created ICMP Header for ICMP");
 
 	/* Pass the packet to sendIp, which will take care of the IP header formatting and look up the destination in the ARP cache
 	Return whatever status this function returns. */
@@ -229,12 +215,7 @@ void handlePacket(struct Instance* sr,
 
   /*First need to figure out what protocol is running above Ethernet here.*/
   uint16_t ether_type = ethertype(packet);
-  
-  /* Debug Statements on Ethertype */
-  /* fprintf(stderr, "*** Parsed Ether Type: %x\n", ether_type); */
-  /* fprintf(stderr, "*** IP Ether Type: %x\n", ethertype_ip); */
-  /* fprintf(stderr, "*** ARP  Ether Type: %x\n", ethertype_arp); */
-  
+    
   switch ( ether_type ) {
     case ethertype_ip :
       printf("*** Handling IP packet\n");
@@ -333,19 +314,15 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
   struct Interface* target_interface = getInterfaceByIp(sr, arp_header->ar_tip);
   
   if (target_interface) {
-    /* debug statement */
-    /* fprintf(stderr, "*** Formated ARP header and found target interface:\n");
     printArpHeader((uint8_t*) arp_header);
-    printInterface(target_interface); */
+    printInterface(target_interface);
     
     /* verify that the arp request is for our router's interface */
     if (strcmp(interface, target_interface->name) == 0) {
-      /* fprintf(stderr, "*** Target interface %s belongs to our router\n", interface); */
       unsigned short arp_code = ntohs(arp_header->ar_op);
       
       if (arp_code == arp_op_reply) {
         fprintf(stderr, "*** Handling ARP Reply\n");
-        /* fprintf(stderr, "*** ARP Packet is an ARP Reply\n"); */
         /* cache the response */
         struct ArpRequest* arp_request = arpCacheInsert(&(sr->cache), arp_header->ar_sha, arp_header->ar_sip);
         fprintf(stderr, "*** Cached ARP Entry\n");
@@ -373,14 +350,7 @@ void handleArpPacket(struct Instance* sr, uint8_t* packet, unsigned int len, cha
         struct EthernetHeader* ethernet_header = (struct EthernetHeader*) packet;
         memcpy(ethernet_header->ether_dhost, arp_header->ar_tha, ETHERNET_ADDRESS_LENGTH);
         memcpy(ethernet_header->ether_shost, arp_header->ar_sha, ETHERNET_ADDRESS_LENGTH);
-        
-        fprintf(stderr, "*** Modified Ethernet Header\n");
-        printHeaders(packet, len);
-        
-        /* fprintf(stderr, "*** Finishined reformatting ARP Reply\n"); */
-        /* printEthernetHeader(packet); */ /* Fixed: was &packet */
-        /* printArpHeader((uint8_t*)arp_header); */ /* Fixed: was &arp_header */
-        
+                        
         /* send packet */
         sendPacket(sr, packet, len, interface); 
         fprintf(stderr, "*** Sent ARP Reply\n");       

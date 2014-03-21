@@ -1,0 +1,49 @@
+Router
+Caleb Turner (603816223) and Eric Pham (303787024)
+
+BASIC ORGANIZATION
+==================
+
+The starting point for our code is handlePacket(). This function then passes the raw Ethernet frame to handleIpPacket or handleArpPacket, depending on its ethertype.
+
+handleIpPacket() checks to see if the packet's destination is one of our IP addresses. If so, it will only handle the packet if it's an ICMP packet, calling handleIcmpPacket(). Otherwise it will throw the packet away. However, if it's supposed to go somewhere else we'll begin forwarding by decrementing the TTL. If the TTL is up, we send an ICMP TTL expired message; otherwise we simply resend it using sendIp().
+
+sendIp() is our centralized function for sending an IP packet that's already formatted with the correct header values (version, TOS, etc.) We don't change any of these for forwarded packets, except TTL and checksum. For IP packets that we create (using sendIcmp()), we have another function makeIpPacket() that mallocs the necessary space and sets all the header info; in this case, this needs to be called before sendIp().
+
+sendIp() makes use of the routing table first to find the IP address of the next hop using findLpmRoute(), then calls arpCacheLookup() to get the MAC address. If the MAC address isn't in the cache, it will queue it, then immediately handle the queued request with handleArpRequest(). If the host doesn't respond the first time, we'll check every second arpCacheSweepRequests; if after 5 tries there's still no response, we'll reply to the original sender with an ICMP unreachable message.
+
+The final function used to send packets is frameAndSendPacket(), which takes an Ethernet frame and a MAC address. It looks up the MAC address of both of our interface that needs to be the source, puts both addresses in the header, and calls the function that writes to the socket.
+
+CONVENTIONS AND OTHER CHANGES
+=============
+
+We refactored most of the functions that we didn't write (the utils functions, for example) so that they would use the same naming conventions as we used in our code. These are:
+
+* variable_name
+* MACRO_NAME
+* struct StructName (no typedefs)
+* functionName()
+* Removed sr_ prefix from everything except file names
+* Removed almost all abbreviations in function names to more easily keep them consistent:
+  addr -> address, ether, eth -> ethernet, auth -> authentication, if -> interface, rt, rtable -> routing table, wrap -> wrapper, hrd, hw -> hardware, sz -> size, cksum -> checksum
+  
+In general we didn't touch the internals of included functions or structs, only their names.
+
+KNOWN BUGS
+==========
+
+The router doesn't seem to send the correct ICMP response on mininet's first traceroute attempt, making itself hidden to the client:
+
+mininet> client traceroute -n 192.168.2.2
+traceroute to 192.168.2.2 (192.168.2.2), 30 hops max, 60 byte packets
+ 1  * * *
+ 2  192.168.2.2  263.603 ms  222.037 ms  259.515 ms
+
+However, on every attempt after the first one traceroute works fine:
+
+mininet> client traceroute -n 192.168.2.2
+traceroute to 192.168.2.2 (192.168.2.2), 30 hops max, 60 byte packets
+ 1  10.0.1.1  1424.653 ms  1424.268 ms  1379.171 ms
+ 2  192.168.2.2  2723.378 ms  2720.018 ms  2711.460 ms
+ 
+Traceroute continues working even when the router is restarted, so this is possibly a conflict with some part of mininet.

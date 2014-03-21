@@ -16,7 +16,6 @@
 #include "sr_protocol.h"
 #include "sr_arpcache.h"
 
-/* we dont like this debug , but what to do for varargs ? */
 #ifdef _DEBUG_
 #define Debug(x, args...) printf(x, ## args)
 #define DebugMAC(x) \
@@ -29,10 +28,8 @@
 
 #define INIT_TTL 255
 #define PACKET_DUMP_SIZE 1024
-/*Caleb added:*/
 #define IP_MIN_PACKET_SIZE 20
 #define ETHERNET_MIN_FRAME_SIZE 64 /*14 header 46 payload 4 checksum*/
-/*But why ... this seems to be wrong. Cus all the packets incoming say 42 bytes*/
 /* forward declare */
 struct Interface;
 struct RoutingTable;
